@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Leave & NSA Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+
+  <style>
+    body { background:#f5f7fb; }
+    .card { border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.05); }
+    .badge-shift { font-size:.75rem; }
+    .date-cell { transition: all 0.2s ease; cursor:pointer; }
+    .date-cell.selected { background-color:#0d6efd; color:#fff; border-radius:8px; }
+    .btn-action { margin-right:5px; }
+    #employeeSearch { max-width:250px; margin-bottom:10px; }
+    .weekend { background-color: #f8d7da; } /* light red/pink */
+    .holiday { background-color: #ffecb5; border: 2px solid #ffc107; } /* light yellow/orange for holiday */
+    .date-day {
+        font-size: 0.7rem;
+        color: #6c757d; /* Muted color for the day name */
+        margin-bottom: 2px;
+    }
+    .weekend .date-day { color: #dc3545; } /* Red for weekend day name */
+    .holiday .date-day { color: #ffc107; } /* Yellow for holiday day name */
+    .date-cell.selected .date-day { color: #fff; } /* White when selected */
+    /* --- STYLES FOR SEARCHABLE DROPDOWN --- */
+    .search-results-container {
+      background: white;
+      border-radius: 8px;
+    }
+    .search-item {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .search-item:hover {
+      background-color: #f0f4ff;
+    }
+    /* ------------------------------------------- */
+    /* Monthly Breakdown Table Styling */
+    .monthly-breakdown-table th {
+        vertical-align: top;
+        min-width: 50px;
+    }
+    .monthly-breakdown-table td {
+        white-space: nowrap;
+    }
+    .total-row {
+        font-weight: bold;
+        background-color: #e9ecef;
+    }
+    /* Tab Styling */
+    .nav-tabs .nav-link {
+        color: #495057;
+        font-weight: bold;
+    }
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <span class="navbar-brand">Leave & NSA Tracker</span>
+  </div>
+</nav>
+
+<div class="container-fluid p-4">
+
+    <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="management-tab" data-bs-toggle="tab" data-bs-target="#management-content" type="button" role="tab" aria-controls="management-content" aria-selected="true">
+                ⚙️ Management
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance-content" type="button" role="tab" aria-controls="attendance-content" aria-selected="false">
+                🗓️ Attendance Calendar
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-content" type="button" role="tab" aria-controls="summary-content" aria-selected="false" onclick="loadSummaryTabDefaults()">
+                📈 Reporting & Summary
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="mainTabsContent">
+
+        <div class="tab-pane fade show active" id="management-content" role="tabpanel" aria-labelledby="management-tab">
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">NSA Rules & Settings</h4>
+                    <div id="nsaRulesContainer" class="row g-3">
+                        </div>
+                    <button class="btn btn-success mt-3" onclick="saveNsaRules()">Save NSA Rules</button>
+                </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Holiday Management</h4>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Date</label>
+                            <input type="date" class="form-control" id="holidayDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Name (Optional)</label>
+                            <input type="text" class="form-control" id="holidayName" placeholder="e.g., Independence Day">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-primary" onclick="addHoliday()">Add Holiday</button>
+                        </div>
+                    </div>
+                    <hr>
+                    <h5 class="mt-3">Upcoming Holidays</h5>
+                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Date</th><th>Name</th><th>Actions</th></tr></thead>
+                            <tbody id="holidaysList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Employee Management</h4>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#employeeModal">+ Add Employee</button>
+                    <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#bulkEmployeeModal">+ Bulk Add</button>
+                    <button id="downloadSampleExcel" class="btn btn-info">Sample Excel</button>
+                    <button class="btn btn-success" onclick="document.getElementById('empExcelFile').click()">
+                        Upload Excel
+                    </button>
+                </div>
+            </div>
+            <input type="file" id="empExcelFile" accept=".xlsx,.xls" style="display:none" onchange="handleExcelUpload(event)">
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row mb-3 g-2">
+                        <div class="col-md-4">
+                            <select class="form-select" id="departmentFilter" onchange="filterEmployees()">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <input class="form-control" id="employeeSearch" placeholder="Search employee..." oninput="filterEmployees()" />
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle" id="employeeTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Shift</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <nav>
+                            <ul class="pagination" id="employeePagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            </div>
+        <div class="tab-pane fade" id="attendance-content" role="tabpanel" aria-labelledby="attendance-tab">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Attendance Calendar</h4>
+                    <div class="row g-3 mb-3">
+                        
+                        <div class="col-md-3 position-relative">
+                            <label class="form-label">Search Employee</label>
+                            <input type="text" class="form-control" id="attendanceSearchInput" placeholder="Type name or ID..." oninput="filterAttendanceEmployees()">
+                            <input type="hidden" id="attendanceEmployee">
+                            
+                            <div id="attendanceSearchResults" class="list-group position-absolute w-100 mt-1 shadow search-results-container" style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none;">
+                                </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Month</label>
+                            <div class="input-group">
+                                <button class="btn btn-outline-secondary" type="button" onclick="changeMonth(-1)" title="Previous Month">«</button>
+                                <input type="month" class="form-control" id="attendanceMonth" min="2023-01"/>
+                                <button class="btn btn-outline-secondary" type="button" onclick="changeMonth(1)" title="Next Month">»</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
+                            <button class="btn btn-success" onclick="markSelected('PRESENT')">Mark Present</button>
+                            <div class="dropdown">
+                                <button class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown">Mark Leave</button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" onclick="markSelected('LEAVE','PL')">PL</a></li>
+                                    <li><a class="dropdown-item" onclick="markSelected('LEAVE','CL')">CL</a></li>
+                                    <li><a class="dropdown-item" onclick="markSelected('LEAVE','SL')">SL</a></li>
+                                    <li><a class="dropdown-item" onclick="markSelected('LEAVE','FL')">FL</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-secondary" onclick="clearSelected()">Clear Selected</button>
+                            <button class="btn btn-danger" onclick="clearAllForEmployee()">Clear Month</button>
+                        </div>
+                    </div>
+                    <div id="calendar" class="row row-cols-7 g-2">
+                         <div class="col"><div class="alert alert-info text-center">Select an employee and a month to view the attendance calendar.</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="summary-content" role="tabpanel" aria-labelledby="summary-tab">
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Employee Monthly Summary</h4>
+                    <div class="row g-3 mb-4">
+                        
+                        <div class="col-md-4 position-relative">
+                            <label class="form-label">Search Employee</label>
+                            <input type="text" class="form-control" id="summarySearchInput" placeholder="Type name or ID..." oninput="filterSummaryEmployees()">
+                            <input type="hidden" id="summaryEmployee">
+                            
+                            <div id="summarySearchResults" class="list-group position-absolute w-100 mt-1 shadow search-results-container" style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none;">
+                                </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Month</label>
+                            <input type="month" class="form-control" id="summaryMonth">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end gap-2 flex-wrap">
+                            <button class="btn btn-primary" onclick="renderEmployeeSummary()">View Summary</button>
+                            <button class="btn btn-secondary d-none" id="backSummaryBtn" onclick="hideEmployeeSummary()">Reset</button>
+                            <button class="btn btn-success" onclick="exportEmpSummary()">Export Employee</button>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-9" id="employeeSummary">
+                            <div class="alert alert-info text-center">Select an employee and month, and click 'View Summary' above.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card p-2">
+                                <h6 class="text-center text-muted">Attendance Status</h6>
+                                <canvas id="summaryChart" style="max-height: 200px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">All Department Monthly Summary</h4>
+                        <button class="btn btn-info" onclick="exportDeptSummary()">Export All Monthly Data</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="deptSummaryTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Working Days</th>
+                                    <th>NSA Amount (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="4" class="text-center text-muted">Summary will appear after clicking 'View Summary' above.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav>
+                        <ul class="pagination" id="deptSummaryPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Department Monthly Breakdown</h4>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Department</label>
+                            <select class="form-select" id="deptSummaryDept">
+                                <option value="">Select Department</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Month</label>
+                            <input type="month" class="form-control" id="deptSummaryMonth" min="2023-01"/>
+                        </div>
+
+                        <div class="col-md-4 d-flex align-items-end gap-2">
+                            <button class="btn btn-primary" onclick="renderDeptMonthlySummary()">Show Summary</button>
+                            <button id="backDeptSummaryBtn" class="btn btn-secondary d-none" onclick="hideDeptSummary()">Reset</button>
+                            <button class="btn btn-success" onclick="exportDeptMonthlySummary()">Export Department</button>
+                        </div>
+                    </div>
+
+                    <div id="deptMonthlySummary" class="table-responsive mt-3">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Working Days</th>
+                                    <th>PL</th>
+                                    <th>CL</th>
+                                    <th>SL</th>
+                                    <th>FL</th>
+                                    <th>NSA Amount (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="7" class="text-center text-muted">Select a department and month to view breakdown.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav>
+                        <ul class="pagination" id="deptMonthlySummaryPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Yearly Departmental Summary</h4>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Year</label>
+                            <input type="number" class="form-control" id="yearlySummaryYear" value="2024" min="2023" max="2030"/> 
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Department (Optional)</label>
+                            <select class="form-select" id="yearlySummaryDept">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
+                            <button class="btn btn-primary" onclick="renderYearlySummary()">Show Yearly Summary</button>
+                            <button class="btn btn-info" onclick="viewMonthlyBreakdown()">View Monthly Breakdown</button>
+                            <button class="btn btn-success" onclick="exportYearlySummary()">Export to Excel</button>
+                        </div>
+                    </div>
+
+                    <div id="yearlySummaryResults" class="table-responsive mt-3">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Yearly Working Days</th>
+                                    <th>PL</th>
+                                    <th>CL</th>
+                                    <th>SL</th>
+                                    <th>FL</th>
+                                    <th>Yearly NSA Amount (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="8" class="text-center text-muted">Select a year and department to view the summary.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+<div class="modal fade" id="employeeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Employee</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="empIndex" />
+        <div class="mb-3">
+          <label class="form-label">Employee ID</label>
+          <input class="form-control" id="empId" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input class="form-control" id="empName" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Department</label>
+          <input class="form-control" id="empDept" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Shift</label>
+          <select class="form-select" id="empShift">
+            <option value="MORNING_8_5">Morning (8AM–5PM)</option>
+            <option value="NIGHT_6_3">Night (6PM–3AM)</option>
+            <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="empStatus">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEmployee()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bulkEmployeeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Bulk Add Employees</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Employee IDs (comma separated)</label>
+          <input type="text" class="form-control" id="bulkEmpIds" placeholder="E001,E002,E003" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Employee Names (comma separated)</label>
+          <input type="text" class="form-control" id="bulkEmpNames" placeholder="John,Amit,Sara" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Department</label>
+          <input type="text" class="form-control" id="bulkEmpDept" placeholder="Support" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Shift</label>
+          <select class="form-select" id="bulkEmpShift">
+            <option value="MORNING_8_5">Morning (8AM–5PM)</option>
+            <option value="NIGHT_6_3">Night (6PM–3AM)</option>
+            <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveBulkEmployees()">Add Employees</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="monthlyBreakdownModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="monthlyBreakdownTitle">Monthly Breakdown - Year 2024 (All Departments)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-bordered monthly-breakdown-table">
+            <thead id="monthlyBreakdownHeader">
+              </thead>
+            <tbody id="monthlyBreakdownBody">
+              </tbody>
+            <tfoot id="monthlyBreakdownFooter">
+                </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="employeeHistoryModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="employeeHistoryTitle">Attendance History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" id="historyFilterDate" placeholder="Filter by Date (YYYY-MM-DD)" oninput="filterEmployeeHistory()">
+            </div>
+            <div class="col-md-6">
+                <select class="form-select" id="historyFilterStatus" onchange="filterEmployeeHistory()">
+                    <option value="">All Statuses</option>
+                    <option value="PRESENT">Present</option>
+                    <option value="LEAVE">Leave</option>
+                </select>
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Leave Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeHistoryBody">
+                    </tbody>
+            </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<script>
+
+    document.getElementById('downloadSampleExcel').addEventListener('click', () => {
+  // Sample employee data
+  const data = [
+    { ID: 'E001', Name: 'John Doe', Department: 'Customer Support', Shift: 'MORNING_8_5', Status: 'Active' },
+    { ID: 'E002', Name: 'Jane Smith', Department: 'Customer Support', Shift: 'NIGHT_6_3', Status: 'Active' },
+    { ID: 'E003', Name: 'Mike Johnson', Department: 'IT', Shift: 'MORNING_8_5', Status: 'Active' },
+    { ID: 'E004', Name: 'Sarah Williams', Department: 'HR', Shift: 'NIGHT_9_30_6_30', Status: 'Active' },
+    { ID: 'E005', Name: 'Alice Brown', Department: 'IT', Shift: 'MORNING_8_5', Status: 'Active' }
+  ];
+
+  // Convert JSON to worksheet
+  const ws = XLSX.utils.json_to_sheet(data);
+
+  // Create workbook and append worksheet
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Employees');
+
+  // Save workbook as Excel file
+  XLSX.writeFile(wb, 'Sample_Employees.xlsx');
+});
+/*********************
+ * STORAGE KEYS
+ *********************/
+const STORAGE_KEY = 'employees';
+const ATTENDANCE_KEY = 'attendance';
+const NSA_KEY = 'nsa_rules';
+const HOLIDAYS_KEY = 'holidays';
+const ROWS_PER_PAGE = 5;
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; 
+// Default NSA Rules
+const DEFAULT_NSA_RULES = { 
+    MORNING_8_5: { name: 'Morning (8AM–5PM)', amount: 0 }, 
+    NIGHT_6_3: { name: 'Night (6PM–3AM)', amount: 350 }, 
+    NIGHT_9_30_6_30: { name: 'Night (9:30PM–6:30AM)', amount: 400 } 
+};
+
+
+let selectedDates = [];
+let currentPage = 1; // For Employee Management table
+let currentHistoryEmpId = null; // For Employee History View
+let summaryChartInstance = null; // To hold the Chart.js instance
+
+// Summary Pagination States
+let deptSummaryPage = 1;
+let deptMonthlySummaryPage = 1;
+
+/*********************
+ * EMPLOYEE STORAGE
+ *********************/
+function getEmployees() { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+function setEmployees(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+/*********************
+ * ATTENDANCE STORAGE
+ *********************/
+function getAttendance() { return JSON.parse(localStorage.getItem(ATTENDANCE_KEY) || '[]'); }
+function setAttendance(data) { localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(data)); }
+
+/*********************
+ * NSA RULE MANAGEMENT
+ *********************/
+function getNsaRules() {
+    // Merge stored rules with defaults to ensure all keys exist
+    const storedRules = JSON.parse(localStorage.getItem(NSA_KEY) || '{}');
+    const mergedRules = { ...DEFAULT_NSA_RULES };
+
+    for (const key in DEFAULT_NSA_RULES) {
+        if (storedRules[key] && !isNaN(storedRules[key].amount)) {
+            mergedRules[key].amount = storedRules[key].amount;
+        }
+    }
+    return mergedRules;
+}
+
+function renderNsaRules() {
+    const container = document.getElementById('nsaRulesContainer');
+    container.innerHTML = '';
+    const rules = getNsaRules();
+
+    for (const key in rules) {
+        const rule = rules[key];
+        const col = document.createElement('div');
+        col.className = 'col-md-4';
+        col.innerHTML = `
+            <label class="form-label">${rule.name}</label>
+            <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <input type="number" class="form-control" id="nsa_${key}" value="${rule.amount}" min="0">
+            </div>
+        `;
+        container.appendChild(col);
+    }
+}
+
+function saveNsaRules() {
+    const newRules = {};
+    for (const key in DEFAULT_NSA_RULES) {
+        const input = document.getElementById(`nsa_${key}`);
+        const amount = parseInt(input.value) || 0;
+
+        newRules[key] = {
+            name: DEFAULT_NSA_RULES[key].name, 
+            amount: Math.max(0, amount) 
+        };
+    }
+
+    localStorage.setItem(NSA_KEY, JSON.stringify(newRules));
+    alert('NSA Rules saved successfully!');
+    renderEmployees(currentPage, document.getElementById('employeeSearch').value);
+}
+
+/*********************
+ * HOLIDAY MANAGEMENT
+ *********************/
+function getHolidays() {
+    const holidays = JSON.parse(localStorage.getItem(HOLIDAYS_KEY) || '[]');
+    return holidays.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function setHolidays(data) {
+    localStorage.setItem(HOLIDAYS_KEY, JSON.stringify(data));
+}
+
+function addHoliday() {
+    const date = document.getElementById('holidayDate').value;
+    const name = document.getElementById('holidayName').value.trim();
+
+    if (!date) {
+        alert('Please select a date.');
+        return;
+    }
+
+    let holidays = getHolidays();
+
+    if (holidays.some(h => h.date === date)) {
+        alert(`Holiday for ${date} already exists.`);
+        return;
+    }
+
+    holidays.push({ date, name });
+    setHolidays(holidays);
+
+    document.getElementById('holidayDate').value = '';
+    document.getElementById('holidayName').value = '';
+    
+    renderHolidaysList();
+    renderCalendar(); 
+    alert(`Holiday added for ${date}.`);
+}
+
+function deleteHoliday(dateToDelete) {
+    if (!confirm(`Are you sure you want to delete the holiday on ${dateToDelete}?`)) return;
+
+    let holidays = getHolidays().filter(h => h.date !== dateToDelete);
+    setHolidays(holidays);
+
+    renderHolidaysList();
+    renderCalendar(); 
+    alert(`Holiday on ${dateToDelete} deleted.`);
+}
+
+function renderHolidaysList() {
+    const listContainer = document.getElementById('holidaysList');
+    listContainer.innerHTML = '';
+    const holidays = getHolidays();
+
+    holidays.forEach(holiday => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${holiday.date}</td>
+            <td>${holiday.name || '-'}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="deleteHoliday('${holiday.date}')">Delete</button></td>
+        `;
+        listContainer.appendChild(tr);
+    });
+    
+    if (holidays.length === 0) {
+        listContainer.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No holidays added.</td></tr>';
+    }
+}
+
+
+/*********************
+ * DEPARTMENT FILTER & HELPERS
+ *********************/
+function populateDepartmentFilter(){
+  const select = document.getElementById('departmentFilter');
+  if(!select) return;
+
+  const departments = [...new Set(
+    getEmployees().map(e => e.department).filter(Boolean)
+  )];
+
+  select.innerHTML = '<option value="">All Departments</option>';
+  departments.forEach(dep=>{
+    const opt = document.createElement('option');
+    opt.value = dep;
+    opt.textContent = dep;
+    select.appendChild(opt);
+  });
+}
+
+function populateDeptDropdown(selectId) {
+  const select = document.getElementById(selectId);
+  select.innerHTML = '<option value="">All Departments</option>';
+  const departments = [...new Set(getEmployees().map(e => e.department).filter(Boolean))];
+  departments.forEach(dep=>{
+    const opt = document.createElement('option');
+    opt.value = dep;
+    opt.textContent = dep;
+    select.appendChild(opt);
+  });
+}
+
+
+// Returns all working days (Mon-Fri EXCLUDING HOLIDAYS) in a given year and month
+function getWorkingDays(year, month) {
+  const allHolidays = getHolidays().map(h => h.date); // Get list of holiday dates
+  const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-based
+  const workingDays = [];
+  
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month - 1, d); // month is 0-based here
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const day = date.getDay(); // 0=Sun, 6=Sat
+    
+    const isWeekend = (day === 0 || day === 6); 
+    const isHoliday = allHolidays.includes(dateStr);
+    
+    if (!isWeekend && !isHoliday) { 
+      workingDays.push(dateStr);
+    }
+  }
+  return workingDays;
+}
+
+// Returns all working days (Mon-Fri EXCLUDING HOLIDAYS) in a given year
+function getAllWorkingDaysInYear(year) {
+  const allHolidays = getHolidays().map(h => h.date); 
+  const workingDays = {};
+  
+  for (let m = 1; m <= 12; m++) {
+    const monthKey = String(m).padStart(2, '0');
+    workingDays[monthKey] = [];
+    const daysInMonth = new Date(year, m, 0).getDate();
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, m - 1, d); // month is 0-based for Date object
+      const dateStr = `${year}-${monthKey}-${String(d).padStart(2,'0')}`;
+      const day = date.getDay(); // 0=Sun, 6=Sat
+      
+      const isWeekend = (day === 0 || day === 6); 
+      const isHoliday = allHolidays.includes(dateStr);
+      
+      if (!isWeekend && !isHoliday) { 
+        workingDays[monthKey].push(dateStr);
+      }
+    }
+  }
+  return workingDays;
+}
+
+/*********************
+ * PAGINATION HELPERS
+ *********************/
+function renderSummaryPagination(containerId, totalPages, currentPage, renderFn, pageVarName, params='') {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  
+  if (totalPages <= 1) return; 
+
+  for (let i = 1; i <= totalPages; i++) {
+    const li = document.createElement('li');
+    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+    
+    const call = params 
+      ? `${pageVarName} = ${i}; ${renderFn}(${params}); return false;`
+      : `${pageVarName} = ${i}; ${renderFn}(); return false;`;
+
+    li.innerHTML = `<a class="page-link" href="#" onclick="${call}">${i}</a>`;
+    container.appendChild(li);
+  }
+}
+
+
+/*********************
+ * EMPLOYEE TABLE
+ *********************/
+function renderEmployees(page=1, filter='') {
+  const tbody = document.querySelector('#employeeTable tbody');
+  tbody.innerHTML = '';
+  const nsaRules = getNsaRules(); 
+
+  const deptFilter = document.getElementById('departmentFilter')?.value || '';
+
+  const employees = getEmployees().filter(emp =>
+    (
+      emp.name.toLowerCase().includes(filter.toLowerCase()) ||
+      emp.id.toLowerCase().includes(filter.toLowerCase()) ||
+      emp.department.toLowerCase().includes(filter.toLowerCase())
+    ) &&
+    (
+      !deptFilter || emp.department === deptFilter
+    )
+  );
+
+  const totalPages = Math.ceil(employees.length / ROWS_PER_PAGE);
+  currentPage = Math.min(page, totalPages) || 1;
+
+  const start = (currentPage - 1) * ROWS_PER_PAGE;
+
+  employees.slice(start, start + ROWS_PER_PAGE).forEach((emp, i) => {
+    const tr = document.createElement('tr');
+    
+    const shiftInfo = nsaRules[emp.shift] || { name: 'Unknown', amount: 0 };
+    const shiftDisplay = `${shiftInfo.name} ${shiftInfo.amount > 0 ? `(₹${shiftInfo.amount})` : ''}`;
+
+    tr.innerHTML = `
+      <td>${emp.id}</td>
+      <td>${emp.name}</td>
+      <td>${emp.department}</td>
+      <td><span class="badge bg-info badge-shift">${shiftDisplay}</span></td>
+      <td>${emp.status}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-secondary btn-action"
+          onclick="viewEmployeeHistory('${emp.id}')">History</button>
+        <button class="btn btn-sm btn-outline-primary btn-action"
+          onclick="editEmployee(${start + i})">Edit</button>
+        <button class="btn btn-sm btn-outline-danger btn-action"
+          onclick="deleteEmployee(${start + i})">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  renderPagination(totalPages);
+  populateAttendanceEmployees(); 
+}
+
+
+function filterEmployees() {
+  renderEmployees(1, document.getElementById('employeeSearch').value);
+}
+
+function renderPagination(totalPages){
+  const container = document.getElementById('employeePagination');
+  container.innerHTML='';
+  for(let i=1;i<=totalPages;i++){
+    const li = document.createElement('li');
+    li.className=`page-item ${i===currentPage?'active':''}`;
+    li.innerHTML=`<a class="page-link" href="#" onclick="renderEmployees(${i})">${i}</a>`;
+    container.appendChild(li);
+  }
+}
+
+/*********************
+ * EMPLOYEE MODAL LOGIC
+ *********************/
+function saveEmployee(){
+  const index = empIndex.value;
+  const emp = {
+    id: empId.value.trim(),
+    name: empName.value.trim(),
+    department: empDept.value.trim(),
+    shift: empShift.value,
+    status: empStatus.value
+  };
+  if(!emp.id||!emp.name||!emp.department){ alert('Please fill all required fields'); return; }
+  const employees=getEmployees();
+  
+  // Check for duplicate ID only when adding new employee
+  if (index === '' && employees.some(e => e.id === emp.id)) {
+      alert(`Employee ID ${emp.id} already exists.`);
+      return;
+  }
+  
+  if(index==='') employees.push(emp); else employees[index]=emp;
+  setEmployees(employees);
+  bootstrap.Modal.getInstance(employeeModal).hide();
+  clearForm();
+  renderEmployees();
+  populateDepartmentFilter(); 
+  populateDeptDropdown('deptSummaryDept'); 
+  populateDeptDropdown('yearlySummaryDept'); 
+}
+
+function saveBulkEmployees() {
+  const ids = document.getElementById('bulkEmpIds').value.split(',').map(v=>v.trim()).filter(Boolean);
+  const names = document.getElementById('bulkEmpNames').value.split(',').map(v=>v.trim()).filter(Boolean);
+  const dept = document.getElementById('bulkEmpDept').value.trim();
+  const shift = document.getElementById('bulkEmpShift').value;
+
+  if(ids.length === 0 || names.length === 0 || !dept){
+    alert("Please fill all fields properly.");
+    return;
+  }
+
+  if(ids.length !== names.length){
+    alert("Number of IDs and Names must match.");
+    return;
+  }
+
+  const employees = getEmployees();
+  let newEmployeesCount = 0;
+
+  for(let i=0; i<ids.length; i++){
+    if (!employees.some(e => e.id === ids[i])) {
+        employees.push({
+            id: ids[i],
+            name: names[i],
+            department: dept,
+            shift: shift,
+            status: 'Active'
+        });
+        newEmployeesCount++;
+    }
+  }
+
+  setEmployees(employees);
+  renderEmployees();
+  populateDepartmentFilter();
+  populateAttendanceEmployees();
+  populateDeptDropdown('deptSummaryDept'); 
+  populateDeptDropdown('yearlySummaryDept'); 
+  bootstrap.Modal.getInstance(document.getElementById('bulkEmployeeModal')).hide();
+
+  alert(`${newEmployeesCount} new employees added.`);
+  document.getElementById('bulkEmpIds').value='';
+  document.getElementById('bulkEmpNames').value='';
+  document.getElementById('bulkEmpDept').value='';
+  document.getElementById('bulkEmpShift').value='MORNING_8_5';
+}
+
+
+function editEmployee(index){
+  const emp=getEmployees()[index];
+  empIndex.value=index;
+  empId.value=emp.id; 
+  empId.readOnly=true; // Prevent changing ID on edit
+  empName.value=emp.name; 
+  empDept.value=emp.department;
+  empShift.value=emp.shift; 
+  empStatus.value=emp.status;
+  new bootstrap.Modal(employeeModal).show();
+}
+
+function deleteEmployee(index){
+  if(!confirm('Delete this employee? This will NOT delete attendance data.')) return;
+  const employees=getEmployees(); 
+  employees.splice(index,1); 
+  setEmployees(employees);
+  renderEmployees();
+  populateDepartmentFilter();
+  populateDeptDropdown('deptSummaryDept');
+  populateDeptDropdown('yearlySummaryDept');
+}
+
+function clearForm(){
+  empIndex.value=''; 
+  empId.value=''; 
+  empId.readOnly=false;
+  empName.value=''; 
+  empDept.value='';
+  empShift.value='MORNING_8_5'; 
+  empStatus.value='Active';
+}
+
+/*********************************
+ * ATTENDANCE UI (SEARCH LOGIC)
+ *********************************/
+
+function filterAttendanceEmployees() {
+  const input = document.getElementById('attendanceSearchInput');
+  const resultsContainer = document.getElementById('attendanceSearchResults');
+  const filter = input.value.toLowerCase();
+  
+  document.getElementById('attendanceEmployee').value = '';
+  document.getElementById('calendar').innerHTML = '<div class="col"><div class="alert alert-info text-center">Select an employee and a month to view the attendance calendar.</div></div>';
+
+
+  if (!filter || filter.length < 2) { 
+    resultsContainer.style.display = 'none';
+    return;
+  }
+
+  const employees = getEmployees().filter(emp => 
+    emp.status === 'Active' && 
+    (emp.name.toLowerCase().includes(filter) || emp.id.toLowerCase().includes(filter))
+  );
+
+  resultsContainer.innerHTML = '';
+  
+  if (employees.length > 0) {
+    employees.forEach(emp => {
+      const item = document.createElement('button');
+      item.type = 'button'; 
+      item.className = 'list-group-item list-group-item-action search-item';
+      item.innerHTML = `<strong>${emp.name}</strong> <small class="text-muted">(${emp.id} - ${emp.department})</small>`;
+      item.onclick = () => selectEmployeeForAttendance(emp);
+      resultsContainer.appendChild(item);
+    });
+    resultsContainer.style.display = 'block';
+  } else {
+    resultsContainer.innerHTML = '<button type="button" class="list-group-item text-muted text-center">No active employees found</button>';
+    resultsContainer.style.display = 'block';
+  }
+}
+
+function selectEmployeeForAttendance(emp) {
+  const input = document.getElementById('attendanceSearchInput');
+  const hiddenIdInput = document.getElementById('attendanceEmployee');
+  const resultsContainer = document.getElementById('attendanceSearchResults');
+
+  input.value = `${emp.name} (${emp.id})`;
+  hiddenIdInput.value = emp.id;
+  
+  resultsContainer.style.display = 'none';
+  renderCalendar();
+}
+
+function populateAttendanceEmployees(){
+  const searchInput = document.getElementById('attendanceSearchInput');
+  const hiddenIdInput = document.getElementById('attendanceEmployee');
+  
+  if(searchInput) searchInput.value = '';
+  if(hiddenIdInput) hiddenIdInput.value = '';
+  const calendar = document.getElementById('calendar');
+  if(calendar) calendar.innerHTML = '<div class="col"><div class="alert alert-info text-center">Select an employee and a month to view the attendance calendar.</div></div>'; 
+}
+
+/*********************************
+ * SUMMARY UI (SEARCH LOGIC)
+ *********************************/
+
+function filterSummaryEmployees() {
+  const input = document.getElementById('summarySearchInput');
+  const resultsContainer = document.getElementById('summarySearchResults');
+  const filter = input.value.toLowerCase();
+  
+  document.getElementById('summaryEmployee').value = '';
+  document.getElementById('employeeSummary').innerHTML = '<div class="alert alert-info text-center">Select an employee and month, and click \'View Summary\' above.</div>';
+  
+  if(summaryChartInstance) summaryChartInstance.destroy();
+
+
+  if (!filter || filter.length < 2) { 
+    resultsContainer.style.display = 'none';
+    return;
+  }
+
+  const employees = getEmployees().filter(emp => 
+    emp.status === 'Active' && 
+    (emp.name.toLowerCase().includes(filter) || emp.id.toLowerCase().includes(filter))
+  );
+
+  resultsContainer.innerHTML = '';
+  
+  if (employees.length > 0) {
+    employees.forEach(emp => {
+      const item = document.createElement('button');
+      item.type = 'button'; 
+      item.className = 'list-group-item list-group-item-action search-item';
+      item.innerHTML = `<strong>${emp.name}</strong> <small class="text-muted">(${emp.id} - ${emp.department})</small>`;
+      item.onclick = () => selectEmployeeForSummary(emp);
+      resultsContainer.appendChild(item);
+    });
+    resultsContainer.style.display = 'block';
+  } else {
+    resultsContainer.innerHTML = '<button type="button" class="list-group-item text-muted text-center">No active employees found</button>';
+    resultsContainer.style.display = 'block';
+  }
+}
+
+function selectEmployeeForSummary(emp) {
+  const input = document.getElementById('summarySearchInput');
+  const hiddenIdInput = document.getElementById('summaryEmployee');
+  const resultsContainer = document.getElementById('summarySearchResults');
+
+  input.value = `${emp.name} (${emp.id})`;
+  hiddenIdInput.value = emp.id;
+  
+  resultsContainer.style.display = 'none';
+}
+
+
+// Universal click handler to close search results when clicking elsewhere
+document.addEventListener('click', function(e) {
+  const closeSearchResults = (searchInputId, resultsContainerId) => {
+    const input = document.getElementById(searchInputId);
+    const container = document.getElementById(resultsContainerId);
+    if (input && container && !input.contains(e.target) && !container.contains(e.target)) {
+      container.style.display = 'none';
+    }
+  };
+  
+  closeSearchResults('attendanceSearchInput', 'attendanceSearchResults');
+  closeSearchResults('summarySearchInput', 'summarySearchResults');
+});
+
+
+function initAttendance(){
+  const monthInput=document.getElementById('attendanceMonth');
+  monthInput.value=new Date().toISOString().slice(0,7);
+  
+  attendanceMonth.addEventListener('change', renderCalendar);
+  
+  populateAttendanceEmployees(); 
+}
+
+
+// NEW FUNCTION: Change month on attendance calendar
+function changeMonth(direction) {
+    const monthInput = document.getElementById('attendanceMonth');
+    const currentValue = monthInput.value; // YYYY-MM
+
+    if (!currentValue) {
+        monthInput.value = new Date().toISOString().slice(0,7);
+        return;
+    }
+
+    let [year, month] = currentValue.split('-').map(Number);
+
+    let newMonth = month + direction;
+    let newYear = year;
+
+    if (newMonth < 1) {
+        newMonth = 12;
+        newYear -= 1;
+    } else if (newMonth > 12) {
+        newMonth = 1;
+        newYear += 1;
+    }
+
+    const newMonthStr = String(newMonth).padStart(2, '0');
+    monthInput.value = `${newYear}-${newMonthStr}`;
+    
+    renderCalendar();
+}
+
+
+/*********************
+ * CALENDAR LOGIC 
+ *********************/
+function renderCalendar(){
+  selectedDates = [];
+  const empId = document.getElementById('attendanceEmployee').value;
+  const month = attendanceMonth.value;
+  const calendar = document.getElementById('calendar');
+  
+  if(!empId || !month) {
+    calendar.innerHTML = '<div class="col"><div class="alert alert-info text-center">Select an employee and a month to view the attendance calendar.</div></div>';
+    return;
+  }
+
+  const [year, m] = month.split('-').map(Number);
+  const daysInMonth = new Date(year, m, 0).getDate();
+  calendar.innerHTML = '';
+  const attendance = getAttendance();
+  const holidays = getHolidays().map(h => h.date);
+
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateObj = new Date(year, m-1, d);
+    const dayIndex = dateObj.getDay(); // 0=Sun, 6=Sat
+    const dayName = DAY_NAMES[dayIndex]; 
+    const date = `${month}-${String(d).padStart(2,'0')}`;
+
+    const cell = document.createElement('div');
+    cell.className = 'col';
+
+    const record = attendance.find(a => a.empId === empId && a.date === date);
+
+    let badge = '';
+    const isWeekend = (dayIndex === 0 || dayIndex === 6);
+    const isHoliday = holidays.includes(date);
+    let extraClass = '';
+    
+    if (isWeekend) {
+        extraClass = ' weekend';
+    } else if (isHoliday) {
+        extraClass = ' holiday';
+    }
+
+    if(record){
+      badge = record.status === 'PRESENT'
+        ? '<span class="badge bg-success">P</span>'
+        : `<span class="badge bg-danger">${record.leaveType}</span>`;
+    } else if(!isWeekend && !isHoliday){
+      // Default to Present if it's a regular working day and no record exists
+      badge = '<span class="badge bg-success">P</span>';
+    } else if (isHoliday) {
+       const holidayName = getHolidays().find(h => h.date === date)?.name || 'Holiday';
+       badge = `<span class="badge bg-warning text-dark">${holidayName.slice(0, 1) || 'H'}</span>`; 
+    }
+
+    cell.innerHTML = `<div class="border rounded p-2 text-center date-cell${extraClass}" data-date="${date}">
+      <div class="date-day">${dayName}</div>
+      <div class="fw-bold">${d}</div>${badge}</div>`;
+
+    cell.firstElementChild.onclick = () => toggleDate(cell, date);
+    calendar.appendChild(cell);
+  }
+}
+
+
+
+function toggleDate(cell,date){
+  const idx=selectedDates.indexOf(date);
+  const box=cell.firstElementChild;
+  if(idx>-1){ selectedDates.splice(idx,1); box.classList.remove('selected'); }
+  else{ selectedDates.push(date); box.classList.add('selected'); }
+}
+
+function markSelected(status,leaveType=null){
+  const empId=document.getElementById('attendanceEmployee').value;
+  if(!empId||selectedDates.length===0){ alert('Select an employee and dates'); return; }
+  
+  let attendance=getAttendance();
+  
+  selectedDates.forEach(date=>{
+    const idx=attendance.findIndex(a=>a.empId===empId && a.date===date);
+    const record={empId,date,status,leaveType};
+    if(idx>-1) attendance[idx]=record; else attendance.push(record);
+  });
+  setAttendance(attendance);
+  renderCalendar();
+}
+
+function clearSelected(){
+  const empId=document.getElementById('attendanceEmployee').value;
+  if(!empId||selectedDates.length===0) return;
+  let attendance=getAttendance();
+  selectedDates.forEach(date=>{
+    const idx=attendance.findIndex(a=>a.empId===empId && a.date===date);
+    if(idx>-1) attendance.splice(idx,1);
+  });
+  selectedDates=[];
+  setAttendance(attendance);
+  renderCalendar();
+}
+
+function clearAllForEmployee(){
+  const empId=document.getElementById('attendanceEmployee').value;
+  if(!empId) return;
+  
+  const month = attendanceMonth.value;
+  if(!confirm(`Are you sure you want to clear ALL attendance records for employee ${empId} for ${month}?`)) return;
+
+  let attendance=getAttendance().filter(a => !(a.empId===empId && a.date.startsWith(month)));
+  selectedDates=[];
+  setAttendance(attendance);
+  renderCalendar();
+}
+
+
+/*********************
+ * SUMMARY BACK BUTTONS (RESET)
+ *********************/
+function loadSummaryTabDefaults() {
+    // This function runs when the Summary tab is clicked
+    // Re-renders the All Department Summary table to ensure it's not showing a filter
+    const month = document.getElementById('summaryMonth').value;
+    if (month) {
+        // Only trigger if a month is already set (i.e., not first load)
+        renderDepartmentSummary(month); 
+    }
+}
+
+function hideEmployeeSummary(){
+  document.getElementById('employeeSummary').innerHTML = '<div class="alert alert-info text-center">Select an employee and month, and click \'View Summary\' above.</div>';
+  document.querySelector('#deptSummaryTable tbody').innerHTML = '<tr><td colspan="4" class="text-center text-muted">Summary will appear after clicking \'View Summary\' above.</td></tr>';
+  document.getElementById('deptSummaryPagination').innerHTML = '';
+  document.getElementById('backSummaryBtn').classList.add('d-none');
+  
+  document.getElementById('summarySearchInput').value = '';
+  document.getElementById('summaryEmployee').value = '';
+  
+  if(summaryChartInstance) summaryChartInstance.destroy();
+}
+
+function hideDeptSummary() {
+  document.querySelector('#deptMonthlySummary tbody').innerHTML = '<tr><td colspan="7" class="text-center text-muted">Select a department and month to view breakdown.</td></tr>';
+  document.getElementById('deptMonthlySummaryPagination').innerHTML = '';
+  document.getElementById('backDeptSummaryBtn').classList.add('d-none');
+
+  document.getElementById('deptSummaryDept').value = '';
+  document.getElementById('deptSummaryMonth').value = new Date().toISOString().slice(0,7);
+}
+
+
+/*********************
+ * MONTHLY SUMMARY LOGIC
+ *********************/
+function renderEmployeeSummary(){
+  const empId = document.getElementById('summaryEmployee').value; 
+  const month = summaryMonth.value;
+  if(!empId || !month){ alert('Select an employee and month'); return; }
+
+  const emp = getEmployees().find(e => e.id === empId);
+  if (!emp) { alert('Employee not found or inactive.'); return; }
+
+  const records = getAttendance().filter(a => a.empId === empId && a.date.startsWith(month));
+
+  const [year, m] = month.split('-').map(Number);
+  const workingDaysInMonth = getWorkingDays(year, m); 
+  const nsaRules = getNsaRules();
+
+  let leaves = { PL:0, CL:0, SL:0, FL:0 };
+  records.filter(r => r.status === 'LEAVE' && r.leaveType)
+         .forEach(r => { 
+             if (workingDaysInMonth.includes(r.date)) {
+                 leaves[r.leaveType]++; 
+             }
+         });
+  
+  const totalLeaves = Object.values(leaves).reduce((a,b)=>a+b, 0);
+
+  let finalPresentDays = workingDaysInMonth.length - totalLeaves;
+  finalPresentDays = Math.max(0, finalPresentDays);
+  
+  const nsaPerDay = nsaRules[emp.shift]?.amount || 0;
+  const nsaAmount = finalPresentDays * nsaPerDay;
+  
+
+  document.getElementById('employeeSummary').innerHTML = `
+    <div class="row g-3">
+        <div class="col-md-4"><div class="card p-3 bg-light">Total Working Days<br><strong>${workingDaysInMonth.length}</strong></div></div>
+        <div class="col-md-4"><div class="card p-3 bg-success text-white">Actual Present Days<br><strong>${finalPresentDays}</strong></div></div>
+        <div class="col-md-4"><div class="card p-3 bg-primary text-white">Leaves (PL/CL/SL/FL)<br><strong>${leaves.PL}/${leaves.CL}/${leaves.SL}/${leaves.FL}</strong></div></div>
+        <div class="col-md-12"><div class="card p-3 bg-info text-white">Final NSA Amount Earned<br><strong>₹${nsaAmount}</strong></div></div>
+    </div>`;
+    
+    renderSummaryChart(finalPresentDays, leaves);
+
+  deptSummaryPage = 1;
+  renderDepartmentSummary(month);
+  document.getElementById('backSummaryBtn').classList.remove('d-none');
+}
+
+function renderSummaryChart(presentDays, leaves) {
+    const ctx = document.getElementById('summaryChart');
+    
+    // Check if total data is zero to avoid crash
+    const totalDays = presentDays + leaves.PL + leaves.CL + leaves.SL + leaves.FL;
+    if (totalDays === 0) {
+        if (summaryChartInstance) summaryChartInstance.destroy();
+        return;
+    }
+    
+    const data = {
+        labels: ['Present', 'PL', 'CL', 'SL', 'FL'],
+        datasets: [{
+            data: [presentDays, leaves.PL, leaves.CL, leaves.SL, leaves.FL],
+            backgroundColor: [
+                'rgb(40, 167, 69)',   
+                'rgb(255, 193, 7)',   
+                'rgb(0, 123, 255)',   
+                'rgb(220, 53, 69)',   
+                'rgb(108, 117, 125)' 
+            ],
+            hoverOffset: 4
+        }]
+    };
+
+    const config = {
+        type: 'doughnut', 
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // Allows flexible sizing
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                title: {
+                    display: false,
+                }
+            }
+        }
+    };
+    
+    if (summaryChartInstance) {
+        summaryChartInstance.destroy();
+    }
+
+    summaryChartInstance = new Chart(ctx, config);
+}
+
+
+function renderDepartmentSummary(month){
+  const tbody=document.querySelector('#deptSummaryTable tbody');
+  tbody.innerHTML='';
+  
+  const [year, m] = month.split('-').map(Number);
+  const workingDaysInMonth = getWorkingDays(year, m); 
+  const nsaRules = getNsaRules();
+
+  const reportData = [];
+  getEmployees().filter(emp => emp.status === 'Active').forEach(emp=>{
+    const records=getAttendance().filter(a=>a.empId===emp.id && a.date.startsWith(month));
+    
+    const leavesCount = records.filter(r => 
+        r.status === 'LEAVE' && workingDaysInMonth.includes(r.date)
+    ).length;
+    
+    let finalPresentDays = workingDaysInMonth.length - leavesCount;
+    finalPresentDays = Math.max(0, finalPresentDays);
+    
+    if(finalPresentDays > 0 || records.length > 0) {
+      const nsaPerDay = nsaRules[emp.shift]?.amount || 0;
+      const nsa=finalPresentDays * nsaPerDay;
+      reportData.push({ emp, days: finalPresentDays, nsa });
+    }
+  });
+
+  const totalPages = Math.ceil(reportData.length / ROWS_PER_PAGE);
+  deptSummaryPage = Math.min(deptSummaryPage, totalPages) || 1;
+
+  const start = (deptSummaryPage - 1) * ROWS_PER_PAGE;
+  
+  if (reportData.length === 0) {
+       tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No attendance data or NSA recorded for this month.</td></tr>';
+       document.getElementById('deptSummaryPagination').innerHTML = '';
+       return;
+  }
+
+  reportData.slice(start, start + ROWS_PER_PAGE).forEach(item => {
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${item.emp.name}</td><td>${item.emp.department}</td><td>${item.days}</td><td>₹${item.nsa}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  renderSummaryPagination(
+    'deptSummaryPagination', 
+    totalPages, 
+    deptSummaryPage, 
+    'renderDepartmentSummary', 
+    'deptSummaryPage',
+    `'${month}'`
+  );
+}
+
+
+function renderDeptMonthlySummary() {
+  const dept = document.getElementById('deptSummaryDept').value;
+  const month = document.getElementById('deptSummaryMonth').value;
+  if(!dept || !month) { 
+    alert('Select department and month'); 
+    return; 
+  }
+  
+  deptMonthlySummaryPage = 1; 
+  renderDeptMonthlySummaryPage(dept, month);
+}
+
+function renderDeptMonthlySummaryPage(dept, month) {
+  const tbody = document.querySelector('#deptMonthlySummary tbody');
+  tbody.innerHTML = '';
+
+  const [year, m] = month.split('-').map(Number);
+  const workingDaysInMonth = getWorkingDays(year, m);
+  const nsaRules = getNsaRules();
+
+  const reportData = [];
+  getEmployees()
+    .filter(emp => emp.department === dept && emp.status==='Active')
+    .forEach(emp => {
+      const records = getAttendance().filter(a => a.empId === emp.id && a.date.startsWith(month));
+
+      const leaves = { PL:0, CL:0, SL:0, FL:0 };
+      records.filter(r => r.status==='LEAVE' && r.leaveType)
+             .forEach(r => { 
+                if (workingDaysInMonth.includes(r.date)) {
+                   leaves[r.leaveType] = (leaves[r.leaveType] || 0) + 1; 
+                }
+             });
+      
+      const totalLeaves = Object.values(leaves).reduce((a,b)=>a+b, 0);
+
+      let finalPresentDays = workingDaysInMonth.length - totalLeaves;
+      finalPresentDays = Math.max(0, finalPresentDays); 
+
+      if(finalPresentDays > 0 || totalLeaves > 0) {
+          const nsaPerDay = nsaRules[emp.shift]?.amount || 0;
+          const nsaAmount = finalPresentDays * nsaPerDay;
+          reportData.push({ emp, finalPresentDays, leaves, nsaAmount });
+      }
+    });
+
+  const totalPages = Math.ceil(reportData.length / ROWS_PER_PAGE);
+  deptMonthlySummaryPage = Math.min(deptMonthlySummaryPage, totalPages) || 1;
+
+  const start = (deptMonthlySummaryPage - 1) * ROWS_PER_PAGE;
+  
+  if (reportData.length === 0) {
+       tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No attendance data or NSA recorded for this department this month.</td></tr>';
+       document.getElementById('deptMonthlySummaryPagination').innerHTML = '';
+       document.getElementById('backDeptSummaryBtn').classList.remove('d-none');
+       return;
+  }
+
+  reportData.slice(start, start + ROWS_PER_PAGE).forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.emp.name}</td>
+      <td>${item.finalPresentDays}</td>
+      <td>${item.leaves.PL}</td>
+      <td>${item.leaves.CL}</td>
+      <td>${item.leaves.SL}</td>
+      <td>${item.leaves.FL}</td>
+      <td>₹${item.nsaAmount}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  renderSummaryPagination(
+    'deptMonthlySummaryPagination', 
+    totalPages, 
+    deptMonthlySummaryPage, 
+    'renderDeptMonthlySummaryPage', 
+    'deptMonthlySummaryPage',
+    `'${dept}', '${month}'`
+  );
+
+  document.getElementById('backDeptSummaryBtn').classList.remove('d-none');
+}
+
+/*********************
+ * YEARLY SUMMARY LOGIC
+ *********************/
+function getYearlyReportData(year, deptFilter) {
+    const activeEmployees = getEmployees().filter(
+        emp => emp.status === 'Active' && (!deptFilter || emp.department === deptFilter)
+    );
+
+    if (activeEmployees.length === 0) return [];
+    
+    const allYearWorkingDaysByMonth = getAllWorkingDaysInYear(Number(year)); 
+    const allAttendance = getAttendance();
+    const allMonths = Object.keys(allYearWorkingDaysByMonth).sort();
+    const nsaRules = getNsaRules();
+    
+    const reportData = activeEmployees.map(emp => {
+        const empReport = {
+            name: emp.name,
+            department: emp.department,
+            shift: emp.shift,
+            monthly: {} 
+        };
+        
+        let yearlyPresentDays = 0;
+        let yearlyLeaves = { PL:0, CL:0, SL:0, FL:0 };
+        let yearlyNSA = 0;
+        const nsaPerDay = nsaRules[emp.shift]?.amount || 0;
+
+
+        allMonths.forEach(monthKey => {
+            const monthPrefix = `${year}-${monthKey}`;
+            const workingDaysInMonth = allYearWorkingDaysByMonth[monthKey];
+            
+            const empAttendance = allAttendance.filter(a => a.empId === emp.id && a.date.startsWith(monthPrefix));
+            
+            let leaves = { PL:0, CL:0, SL:0, FL:0 };
+            empAttendance.filter(r => r.status === 'LEAVE' && r.leaveType)
+                         .forEach(r => { 
+                             if (workingDaysInMonth.includes(r.date)) {
+                                 leaves[r.leaveType] = (leaves[r.leaveType] || 0) + 1;
+                                 yearlyLeaves[r.leaveType] += 1; 
+                             }
+                         });
+            
+            const totalLeaves = Object.values(leaves).reduce((a,b)=>a+b, 0);
+
+            let presentDays = workingDaysInMonth.length - totalLeaves;
+            presentDays = Math.max(0, presentDays);
+            
+            const nsa = presentDays * nsaPerDay;
+
+            yearlyPresentDays += presentDays;
+            yearlyNSA += nsa;
+
+            empReport.monthly[monthKey] = { presentDays, leaves, nsa };
+        });
+
+        empReport.presentDays = yearlyPresentDays;
+        empReport.leaves = yearlyLeaves;
+        empReport.nsa = yearlyNSA;
+
+        return empReport;
+    }).filter(item => item.presentDays > 0 || item.leaves.PL > 0 || item.leaves.CL > 0 || item.leaves.SL > 0 || item.leaves.FL > 0);
+    
+    return reportData;
+}
+
+
+function renderYearlySummary() {
+  const year = document.getElementById('yearlySummaryYear').value;
+  const deptFilter = document.getElementById('yearlySummaryDept').value;
+  const tbody = document.querySelector('#yearlySummaryResults tbody');
+  tbody.innerHTML = '';
+
+  if (!year || year.length !== 4) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Please enter a valid 4-digit year.</td></tr>';
+    return;
+  }
+  
+  const reportData = getYearlyReportData(year, deptFilter);
+  
+  if (reportData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No attendance data or NSA recorded for this group.</td></tr>';
+    return;
+  }
+
+  reportData.forEach(item => {
+    const totalLeaves = item.leaves.PL + item.leaves.CL + item.leaves.SL + item.leaves.FL;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.name}</td>
+      <td>${item.department}</td>
+      <td>${item.presentDays}</td>
+      <td>${item.leaves.PL}</td>
+      <td>${item.leaves.CL}</td>
+      <td>${item.leaves.SL}</td>
+      <td>${item.leaves.FL}</td>
+      <td>₹${item.nsa}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/*********************
+ * MONTHLY BREAKDOWN MODAL 
+ *********************/
+function viewMonthlyBreakdown() {
+    const year = document.getElementById('yearlySummaryYear').value;
+    const deptFilter = document.getElementById('yearlySummaryDept').value;
+    
+    if (!year || year.length !== 4) {
+        alert('Please select a valid year first.');
+        return;
+    }
+    
+    const reportData = getYearlyReportData(year, deptFilter);
+
+    if (reportData.length === 0) {
+        alert('No data to display. Please generate the Yearly Summary first.');
+        return;
+    }
+
+    renderMonthlyBreakdown(reportData, year, deptFilter);
+    new bootstrap.Modal(document.getElementById('monthlyBreakdownModal')).show();
+}
+
+function renderMonthlyBreakdown(reportData, year, deptFilter) {
+    const title = document.getElementById('monthlyBreakdownTitle');
+    const header = document.getElementById('monthlyBreakdownHeader');
+    const body = document.getElementById('monthlyBreakdownBody');
+    const footer = document.getElementById('monthlyBreakdownFooter');
+
+    title.textContent = `Monthly Breakdown - Year ${year} (${deptFilter || 'All Departments'})`;
+    header.innerHTML = '';
+    body.innerHTML = '';
+    footer.innerHTML = '';
+
+    // --- 1. Construct Header ---
+    const headerRow1 = document.createElement('tr');
+    const headerRow2 = document.createElement('tr');
+
+    headerRow1.innerHTML += `<th rowspan="2">Employee</th><th rowspan="2">Dept</th>`;
+    headerRow2.innerHTML += ``; 
+
+    const allMonths = Object.keys(reportData[0].monthly).sort(); 
+
+    allMonths.forEach(monthKey => {
+        const monthName = MONTH_NAMES[parseInt(monthKey) - 1];
+
+        headerRow1.innerHTML += `<th colspan="6" class="text-center">${monthName}</th>`;
+        
+        headerRow2.innerHTML += `<th>P</th><th>PL</th><th>CL</th><th>SL</th><th>FL</th><th>NSA</th>`;
+    });
+
+    headerRow1.innerHTML += `<th rowspan="2">Yearly P</th><th rowspan="2">Yearly L</th><th rowspan="2">Yearly NSA (₹)</th>`;
+
+    header.appendChild(headerRow1);
+    header.appendChild(headerRow2);
+
+
+    // --- 2. Construct Body (Data Rows) ---
+    reportData.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML += `<td>${item.name}</td><td>${item.department}</td>`;
+        const totalLeaves = item.leaves.PL + item.leaves.CL + item.leaves.SL + item.leaves.FL;
+
+        allMonths.forEach(monthKey => {
+            const data = item.monthly[monthKey];
+            
+            tr.innerHTML += `
+                <td>${data.presentDays}</td>
+                <td>${data.leaves.PL}</td>
+                <td>${data.leaves.CL}</td>
+                <td>${data.leaves.SL}</td>
+                <td>${data.leaves.FL}</td>
+                <td>₹${data.nsa}</td>
+            `;
+        });
+
+        tr.innerHTML += `
+            <td class="table-info">${item.presentDays}</td>
+            <td class="table-danger">${totalLeaves}</td>
+            <td class="table-warning">₹${item.nsa}</td>
+        `;
+
+        body.appendChild(tr);
+    });
+
+    // --- 3. Construct Footer (Grand Totals) ---
+    const totalRow = document.createElement('tr');
+    totalRow.className = 'total-row';
+    
+    totalRow.innerHTML += `<td colspan="2">GRAND TOTAL (All Employees)</td>`;
+
+    let grandTotalP = 0;
+    let grandTotalL = 0;
+    let grandTotalNSA = 0;
+
+    allMonths.forEach(monthKey => {
+        let monthTotalP = 0;
+        let monthTotalL = 0;
+        let monthTotalNSA = 0;
+
+        reportData.forEach(item => {
+            const data = item.monthly[monthKey];
+            monthTotalP += data.presentDays;
+            monthTotalL += data.leaves.PL + data.leaves.CL + data.leaves.SL + data.leaves.FL;
+            monthTotalNSA += data.nsa;
+        });
+        
+        grandTotalP += monthTotalP;
+        grandTotalL += monthTotalL;
+        grandTotalNSA += monthTotalNSA;
+
+
+        totalRow.innerHTML += `
+            <td>${monthTotalP}</td>
+            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.PL, 0)}</td>
+            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.CL, 0)}</td>
+            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.SL, 0)}</td>
+            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.FL, 0), 0}</td>
+            <td>₹${monthTotalNSA}</td>
+        `;
+    });
+
+    totalRow.innerHTML += `
+        <td class="table-info">${grandTotalP}</td>
+        <td class="table-danger">${grandTotalL}</td>
+        <td class="table-warning">₹${grandTotalNSA}</td>
+    `;
+
+
+    footer.appendChild(totalRow);
+}
+
+/*********************
+ * EMPLOYEE HISTORY VIEW
+ *********************/
+let currentEmployeeHistoryRecords = [];
+
+function viewEmployeeHistory(empId) {
+    currentHistoryEmpId = empId;
+    const emp = getEmployees().find(e => e.id === empId);
+    if (!emp) return;
+
+    document.getElementById('employeeHistoryTitle').textContent = `Attendance History: ${emp.name} (${emp.id})`;
+    
+    currentEmployeeHistoryRecords = getAttendance()
+        .filter(a => a.empId === empId)
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+    document.getElementById('historyFilterDate').value = '';
+    document.getElementById('historyFilterStatus').value = '';
+    filterEmployeeHistory();
+
+    new bootstrap.Modal(document.getElementById('employeeHistoryModal')).show();
+}
+
+function filterEmployeeHistory() {
+    const filterDate = document.getElementById('historyFilterDate').value;
+    const filterStatus = document.getElementById('historyFilterStatus').value;
+    const tbody = document.getElementById('employeeHistoryBody');
+    tbody.innerHTML = '';
+    
+    const filteredRecords = currentEmployeeHistoryRecords.filter(record => {
+        const dateMatch = !filterDate || record.date.includes(filterDate);
+        const statusMatch = !filterStatus || record.status === filterStatus;
+        return dateMatch && statusMatch;
+    });
+    
+    if (filteredRecords.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No matching history records found.</td></tr>';
+        return;
+    }
+
+    filteredRecords.forEach(record => {
+        const tr = document.createElement('tr');
+        const statusClass = record.status === 'PRESENT' ? 'bg-success text-white' : 'bg-danger text-white';
+        const statusText = record.status === 'LEAVE' ? `${record.leaveType || 'LEAVE'}` : 'PRESENT';
+
+        tr.innerHTML = `
+            <td>${record.date}</td>
+            <td><span class="badge ${statusClass}">${statusText}</span></td>
+            <td>${record.leaveType || '-'}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="deleteHistoryRecord('${record.date}')">Clear</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function deleteHistoryRecord(dateToDelete) {
+    if (!currentHistoryEmpId || !dateToDelete) return;
+
+    if (!confirm(`Are you sure you want to delete the attendance record for ${currentHistoryEmpId} on ${dateToDelete}?`)) {
+        return;
+    }
+
+    let attendance = getAttendance();
+    const initialLength = attendance.length;
+    
+    attendance = attendance.filter(a => !(a.empId === currentHistoryEmpId && a.date === dateToDelete));
+    
+    if (attendance.length < initialLength) {
+        setAttendance(attendance);
+        currentEmployeeHistoryRecords = currentEmployeeHistoryRecords.filter(r => r.date !== dateToDelete);
+        
+        const activeEmpId = document.getElementById('attendanceEmployee').value;
+        const activeMonth = document.getElementById('attendanceMonth').value;
+        if (activeEmpId === currentHistoryEmpId && dateToDelete.startsWith(activeMonth)) {
+            renderCalendar();
+        }
+        
+        filterEmployeeHistory();
+    }
+}
+
+
+/*********************
+ * EXPORT TO EXCEL
+ *********************/
+function exportDeptSummary(){
+  const table=document.getElementById('deptSummaryTable');
+  if (table.querySelector('tbody tr td')?.textContent.includes('No attendance data')) {
+      alert('No data to export. Generate the summary first.');
+      return;
+  }
+  const wb=XLSX.utils.table_to_book(table,{sheet:"Department Summary"});
+  XLSX.writeFile(wb,`Department_Summary.xlsx`);
+}
+
+function exportEmpSummary(){
+  const empId=document.getElementById('summaryEmployee').value; 
+  const month=summaryMonth.value;
+  if(!empId||!month){ alert('Select an employee and month'); return; }
+  const emp=getEmployees().find(e=>e.id===empId);
+  const records=getAttendance().filter(a=>a.empId===empId && a.date.startsWith(month));
+  if(records.length === 0){ alert('No attendance records for this employee this month.'); return; }
+  const data=records.map(r=>({Date:r.date,Status:r.status,LeaveType:r.leaveType||''}));
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,`${emp.name} Summary`);
+  XLSX.writeFile(wb,`${emp.name}_Summary.xlsx`);
+}
+
+function exportDeptMonthlySummary() {
+  const dept = document.getElementById('deptSummaryDept').value;
+  const month = document.getElementById('deptSummaryMonth').value;
+  if(!dept || !month) { alert('Select both department and month'); return; }
+
+  const [year, m] = month.split('-').map(Number);
+  const workingDaysInMonth = getWorkingDays(year, m);
+  const nsaRules = getNsaRules();
+
+  const data = [];
+  getEmployees()
+    .filter(e => e.department === dept && e.status==='Active')
+    .forEach(emp => {
+      const records = getAttendance().filter(a => a.empId===emp.id && a.date.startsWith(month));
+      
+      const leaves = { PL:0, CL:0, SL:0, FL:0 };
+      records.filter(r => r.status==='LEAVE' && r.leaveType)
+             .forEach(r => { 
+                if (workingDaysInMonth.includes(r.date)) {
+                   leaves[r.leaveType] = (leaves[r.leaveType] || 0) + 1; 
+                }
+             });
+      
+      const totalLeaves = Object.values(leaves).reduce((a,b)=>a+b, 0);
+
+      let finalPresentDays = workingDaysInMonth.length - totalLeaves;
+      finalPresentDays = Math.max(0, finalPresentDays); 
+
+      if(finalPresentDays === 0 && totalLeaves === 0) return;
+
+      const nsaPerDay = nsaRules[emp.shift]?.amount || 0;
+      const nsaAmount = finalPresentDays * nsaPerDay;
+
+      data.push({
+        Employee: emp.name,
+        'Working Days (P)': finalPresentDays,
+        PL: leaves.PL,
+        CL: leaves.CL,
+        SL: leaves.SL,
+        FL: leaves.FL,
+        'NSA Amount (₹)': nsaAmount
+      });
+    });
+
+  if(data.length===0){ alert('No data to export'); return; }
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `${dept}_${month}`);
+  XLSX.writeFile(wb, `${dept}_${month}_Summary.xlsx`);
+}
+
+function exportYearlySummary() {
+  const table = document.querySelector('#yearlySummaryResults table');
+  const year = document.getElementById('yearlySummaryYear').value;
+  const dept = document.getElementById('yearlySummaryDept').value || 'All';
+  
+  if (!table || table.querySelector('tbody').children.length === 0 || table.querySelector('tbody td')?.textContent.includes('Select a year')) {
+    alert('No data to export. Generate the summary first.');
+    return;
+  }
+  
+  const wb = XLSX.utils.table_to_book(table, { sheet: `${dept}_${year}_Summary` });
+  XLSX.writeFile(wb, `${dept}_${year}_Yearly_Summary.xlsx`);
+}
+
+
+// Call dropdown population on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+  renderHolidaysList(); 
+  renderNsaRules(); 
+  populateDepartmentFilter();
+  populateDeptDropdown('deptSummaryDept');
+  populateDeptDropdown('yearlySummaryDept');
+  initAttendance(); 
+  renderEmployees(); 
+  document.getElementById('yearlySummaryYear').value = new Date().getFullYear(); 
+  document.getElementById('summaryMonth').value = new Date().toISOString().slice(0,7);
+  document.getElementById('deptSummaryMonth').value = new Date().toISOString().slice(0,7);
+});
+
+function handleExcelUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0]; 
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+    const employees = getEmployees();
+    let newEmployeesCount = 0;
+
+    jsonData.forEach(row => {
+      if(!row.ID || !row.Name || !row.Department) return; 
+      
+      if (employees.some(e => e.id === row.ID)) return; 
+
+      employees.push({
+        id: row.ID,
+        name: row.Name,
+        department: row.Department,
+        shift: row.Shift || 'MORNING_8_5',
+        status: row.Status || 'Active'
+      });
+      newEmployeesCount++;
+    });
+
+    setEmployees(employees);
+    renderEmployees();
+    populateDepartmentFilter();
+    populateAttendanceEmployees();
+    populateDeptDropdown('deptSummaryDept');
+    populateDeptDropdown('yearlySummaryDept');
+
+    alert(`${newEmployeesCount} unique employees uploaded successfully.`);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+</script>
+</body>
+</html>
