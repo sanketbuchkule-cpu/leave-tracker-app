@@ -107,11 +107,195 @@
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <div class="container-fluid">
-    <span class="navbar-brand">Leave & NSA Tracker</span>
+<div class="modal fade" id="employeeModal" tabindex="-1" aria-labelledby="employeeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="employeeModalLabel">Employee Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="clearForm()"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <input type="hidden" id="empIndex">
+          <div class="mb-3">
+            <label for="empId" class="form-label">Employee ID</label>
+            <input type="text" class="form-control" id="empId">
+          </div>
+          <div class="mb-3">
+            <label for="empName" class="form-label">Name</label>
+            <input type="text" class="form-control" id="empName">
+          </div>
+          <div class="mb-3">
+            <label for="empDept" class="form-label">Department</label>
+            <input type="text" class="form-control" id="empDept">
+          </div>
+          <div class="mb-3">
+            <label for="empJoinDate" class="form-label">Join Date</label>
+            <input type="date" class="form-control" id="empJoinDate">
+          </div>
+          <div class="mb-3">
+            <label for="empShift" class="form-label">Default Shift</label>
+            <select class="form-select" id="empShift">
+              <option value="MORNING_8_5">Morning (8AM–5PM)</option>
+              <option value="NIGHT_6_3">Night (6PM–3AM)</option>
+              <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="empStatus" class="form-label">Status</label>
+            <select class="form-select" id="empStatus">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="clearForm()">Close</button>
+        <button type="button" class="btn btn-primary" onclick="saveEmployee()">Save Employee</button>
+      </div>
+    </div>
   </div>
-</nav>
+</div>
+
+<div class="modal fade" id="bulkEmployeeModal" tabindex="-1" aria-labelledby="bulkEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkEmployeeModalLabel">Bulk Add Employees</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Enter IDs and Names separated by commas. All employees will be assigned the same Department, Join Date, and Shift.</p>
+                <div class="mb-3">
+                    <label for="bulkEmpIds" class="form-label">Employee IDs (comma separated)</label>
+                    <textarea class="form-control" id="bulkEmpIds" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="bulkEmpNames" class="form-label">Employee Names (comma separated)</label>
+                    <textarea class="form-control" id="bulkEmpNames" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="bulkEmpDept" class="form-label">Department</label>
+                    <input type="text" class="form-control" id="bulkEmpDept">
+                </div>
+                <div class="mb-3">
+                    <label for="bulkEmpJoinDate" class="form-label">Join Date</label>
+                    <input type="date" class="form-control" id="bulkEmpJoinDate">
+                </div>
+                <div class="mb-3">
+                    <label for="bulkEmpShift" class="form-label">Default Shift</label>
+                    <select class="form-select" id="bulkEmpShift">
+                        <option value="MORNING_8_5">Morning (8AM–5PM)</option>
+                        <option value="NIGHT_6_3">Night (6PM–3AM)</option>
+                        <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveBulkEmployees()">Add Employees</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="shiftOverrideModal" tabindex="-1" aria-labelledby="shiftOverrideModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="shiftOverrideModalLabel">Override Shift</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Setting custom shift for <strong id="overrideDatesCount">0</strong> selected day(s).</p>
+        <label for="overrideShift" class="form-label">Select Shift/NSA Rule</label>
+        <select class="form-select" id="overrideShift">
+          <option value="MORNING_8_5">Morning (8AM–5PM)</option>
+          <option value="NIGHT_6_3">Night (6PM–3AM)</option>
+          <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-info" onclick="markShiftOverride()">Apply Override</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="employeeHistoryModal" tabindex="-1" aria-labelledby="employeeHistoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="employeeHistoryTitle">Attendance History: Employee Name (ID)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3 g-2">
+            <div class="col-md-5">
+                <label for="historyFilterDate" class="form-label">Filter by Date (YYYY-MM)</label>
+                <input type="text" class="form-control" id="historyFilterDate" oninput="filterEmployeeHistory()" placeholder="e.g., 2024-09">
+            </div>
+            <div class="col-md-5">
+                <label for="historyFilterStatus" class="form-label">Filter by Status</label>
+                <select class="form-select" id="historyFilterStatus" onchange="filterEmployeeHistory()">
+                    <option value="">All Statuses</option>
+                    <option value="PRESENT">PRESENT (Default)</option>
+                    <option value="LEAVE">LEAVE</option>
+                    <option value="SHIFT_OVERRIDE">Shift Override</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" onclick="document.getElementById('historyFilterDate').value='';document.getElementById('historyFilterStatus').value='';filterEmployeeHistory()">Reset</button>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Details/Shift</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeHistoryBody">
+                </tbody>
+            </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="monthlyBreakdownModal" tabindex="-1" aria-labelledby="monthlyBreakdownModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="monthlyBreakdownTitle">Monthly Breakdown</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm monthly-breakdown-table">
+                <thead id="monthlyBreakdownHeader" class="table-light"></thead>
+                <tbody id="monthlyBreakdownBody"></tbody>
+                <tfoot id="monthlyBreakdownFooter"></tfoot>
+            </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div class="container-fluid p-4">
 
@@ -174,7 +358,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Employee Management</h4>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#employeeModal">+ Add Employee</button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#employeeModal" onclick="clearForm()">+ Add Employee</button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#bulkEmployeeModal">+ Bulk Add</button>
                     <button id="downloadSampleExcel" class="btn btn-info">Sample Excel</button>
                     <button class="btn btn-success" onclick="document.getElementById('empExcelFile').click()">
@@ -312,6 +496,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -325,295 +510,115 @@
                                 <tr>
                                     <th>Employee</th>
                                     <th>Department</th>
-                                    <th>Working Days</th>
-                                    <th>NSA Amount (₹)</th>
+                                    <th>Present Days</th>
+                                    <th>Total NSA (₹)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr><td colspan="4" class="text-center text-muted">Summary will appear after clicking 'View Summary' above.</td></tr>
                             </tbody>
                         </table>
+                        <nav><ul class="pagination" id="deptSummaryPagination"></ul></nav>
                     </div>
-                    <nav>
-                        <ul class="pagination" id="deptSummaryPagination"></ul>
-                    </nav>
                 </div>
             </div>
+
             <div class="card mb-4">
                 <div class="card-body">
-                    <h4 class="mb-3">Department Monthly Breakdown</h4>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Department Monthly Breakdown</h4>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-secondary d-none" id="backDeptSummaryBtn" onclick="hideDeptSummary()">Reset</button>
+                            <button class="btn btn-info" onclick="exportDeptMonthlySummary()">Export Breakdown</button>
+                        </div>
+                    </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label">Department</label>
                             <select class="form-select" id="deptSummaryDept">
-                                <option value="">Select Department</option>
+                                <option value="">All Departments</option>
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Month</label>
-                            <input type="month" class="form-control" id="deptSummaryMonth" min="2023-01"/>
+                            <input type="month" class="form-control" id="deptSummaryMonth">
                         </div>
-
-                        <div class="col-md-4 d-flex align-items-end gap-2">
-                            <button class="btn btn-primary" onclick="renderDeptMonthlySummary()">Show Summary</button>
-                            <button id="backDeptSummaryBtn" class="btn btn-secondary d-none" onclick="hideDeptSummary()">Reset</button>
-                            <button class="btn btn-success" onclick="exportDeptMonthlySummary()">Export Department</button>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-primary" onclick="renderDeptMonthlySummary()">View Breakdown</button>
                         </div>
                     </div>
-
-                    <div id="deptMonthlySummary" class="table-responsive mt-3">
-                        <table class="table table-bordered">
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="deptMonthlySummary">
                             <thead class="table-light">
                                 <tr>
                                     <th>Employee</th>
-                                    <th>Working Days</th>
+                                    <th>P</th>
                                     <th>PL</th>
                                     <th>CL</th>
                                     <th>SL</th>
                                     <th>FL</th>
-                                    <th>NSA Amount (₹)</th>
+                                    <th>Total NSA (₹)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr><td colspan="7" class="text-center text-muted">Select a department and month to view breakdown.</td></tr>
                             </tbody>
                         </table>
+                        <nav><ul class="pagination" id="deptMonthlySummaryPagination"></ul></nav>
                     </div>
-                    <nav>
-                        <ul class="pagination" id="deptMonthlySummaryPagination"></ul>
-                    </nav>
                 </div>
             </div>
-            <div class="card mb-4">
+
+            <div class="card">
                 <div class="card-body">
-                    <h4 class="mb-3">Yearly Departmental Summary</h4>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Year</label>
-                            <input type="number" class="form-control" id="yearlySummaryYear" value="2024" min="2023" max="2030"/> 
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Yearly Summary</h4>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-warning" onclick="viewMonthlyBreakdown()">View Monthly Breakdown Table</button>
+                            <button class="btn btn-info" onclick="exportYearlySummary()">Export Yearly Data</button>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Department (Optional)</label>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Year</label>
+                            <input type="number" class="form-control" id="yearlySummaryYear" value="2024" min="2023" max="2050">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Department Filter</label>
                             <select class="form-select" id="yearlySummaryDept">
                                 <option value="">All Departments</option>
                             </select>
                         </div>
-                        <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
-                            <button class="btn btn-primary" onclick="renderYearlySummary()">Show Yearly Summary</button>
-                            <button class="btn btn-info" onclick="viewMonthlyBreakdown()">View Monthly Breakdown</button>
-                            <button class="btn btn-success" onclick="exportYearlySummary()">Export to Excel</button>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-primary" onclick="renderYearlySummary()">Generate Yearly Summary</button>
                         </div>
                     </div>
 
-                    <div id="yearlySummaryResults" class="table-responsive mt-3">
-                        <table class="table table-bordered">
+                    <div class="table-responsive" id="yearlySummaryResults">
+                        <table class="table table-bordered table-striped">
                             <thead class="table-light">
                                 <tr>
                                     <th>Employee</th>
                                     <th>Department</th>
-                                    <th>Yearly Working Days</th>
+                                    <th>P (Total)</th>
                                     <th>PL</th>
                                     <th>CL</th>
                                     <th>SL</th>
                                     <th>FL</th>
-                                    <th>Yearly NSA Amount (₹)</th>
+                                    <th>Total NSA (₹)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="8" class="text-center text-muted">Select a year and department to view the summary.</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted">Select a year and click 'Generate Yearly Summary'.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-            </div>
-        </div>
-    </div>
 
-<div class="modal fade" id="employeeModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Employee</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="empIndex" />
-        <div class="mb-3">
-          <label class="form-label">Employee ID</label>
-          <input class="form-control" id="empId" />
         </div>
-        <div class="mb-3">
-          <label class="form-label">Name</label>
-          <input class="form-control" id="empName" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Department</label>
-          <input class="form-control" id="empDept" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Join Date</label>
-          <input type="date" class="form-control" id="empJoinDate" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Shift</label>
-          <select class="form-select" id="empShift">
-            <option value="MORNING_8_5">Morning (8AM–5PM)</option>
-            <option value="NIGHT_6_3">Night (6PM–3AM)</option>
-            <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Status</label>
-          <select class="form-select" id="empStatus">
-            <option>Active</option>
-            <option>Inactive</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-primary" onclick="saveEmployee()">Save</button>
-      </div>
     </div>
-  </div>
-</div>
-
-<div class="modal fade" id="bulkEmployeeModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Bulk Add Employees</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label">Employee IDs (comma separated)</label>
-          <input type="text" class="form-control" id="bulkEmpIds" placeholder="E001,E002,E003" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Employee Names (comma separated)</label>
-          <input type="text" class="form-control" id="bulkEmpNames" placeholder="John,Amit,Sara" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Join Date (YYYY-MM-DD) - Applied to All</label>
-          <input type="date" class="form-control" id="bulkEmpJoinDate" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Department</label>
-          <input type="text" class="form-control" id="bulkEmpDept" placeholder="Support" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Shift</label>
-          <select class="form-select" id="bulkEmpShift">
-            <option value="MORNING_8_5">Morning (8AM–5PM)</option>
-            <option value="NIGHT_6_3">Night (6PM–3AM)</option>
-            <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-primary" onclick="saveBulkEmployees()">Add Employees</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="shiftOverrideModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Override Shift for Selected Dates</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p>Selected Dates: <span class="fw-bold" id="overrideDatesCount">0</span></p>
-        <div class="mb-3">
-          <label class="form-label">Select New Shift</label>
-          <select class="form-select" id="overrideShift">
-            <option value="MORNING_8_5">Morning (8AM–5PM)</option>
-            <option value="NIGHT_6_3">Night (6PM–3AM)</option>
-            <option value="NIGHT_9_30_6_30">Night (9:30PM–6:30AM)</option>
-          </select>
-        </div>
-        <p class="text-danger small">NSA for the selected dates will be calculated based on the chosen shift above, overriding the employee's default shift.</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-info" onclick="markShiftOverride()">Save Shift Override</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<div class="modal fade" id="monthlyBreakdownModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="monthlyBreakdownTitle">Monthly Breakdown - Year 2024 (All Departments)</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="table-responsive">
-          <table class="table table-bordered monthly-breakdown-table">
-            <thead id="monthlyBreakdownHeader">
-              </thead>
-            <tbody id="monthlyBreakdownBody">
-              </tbody>
-            <tfoot id="monthlyBreakdownFooter">
-                </tfoot>
-          </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="modal fade" id="employeeHistoryModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="employeeHistoryTitle">Attendance History</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <input type="text" class="form-control" id="historyFilterDate" placeholder="Filter by Date (YYYY-MM-DD)" oninput="filterEmployeeHistory()">
-            </div>
-            <div class="col-md-6">
-                <select class="form-select" id="historyFilterStatus" onchange="filterEmployeeHistory()">
-                    <option value="">All Statuses</option>
-                    <option value="PRESENT">Present</option>
-                    <option value="LEAVE">Leave</option>
-                    <option value="SHIFT_OVERRIDE">Shift Override</option>
-                </select>
-            </div>
-        </div>
-        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-            <table class="table table-sm table-striped">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Details</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="employeeHistoryBody">
-                    </tbody>
-            </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -1188,7 +1193,6 @@ function populateAttendanceEmployees(){
   if(calendar) calendar.innerHTML = '<div class="col"><div class="alert alert-info text-center">Select an employee and a month to view the attendance calendar.</div></div>'; 
 }
 
-
 /*********************************
  * SUMMARY UI (SEARCH LOGIC)
  *********************************/
@@ -1367,18 +1371,32 @@ function renderCalendar(){
     
     // Determine status based on record
     if(record){
-      if (record.status === 'PRESENT' && !record.customShift) {
-        badge = '<span class="badge bg-success">P</span>';
-        statusText = 'P';
-      } else if (record.status === 'LEAVE') {
+      if (record.status === 'LEAVE') {
         badge = `<span class="badge bg-danger">${record.leaveType}</span>`;
         statusText = record.leaveType;
       } else if (record.customShift) { 
         const shiftName = getNsaRules()[record.customShift]?.name || 'Shift Change';
-        const shiftCode = record.customShift.split('_')[0].slice(0, 1) + (record.customShift.includes('NIGHT') ? 'N' : 'M'); 
-        badge = `<span class="badge bg-info text-dark">${shiftCode}</span>`;
+        
+        // --- START: UPDATED SHIFT CODE LOGIC ---
+        let displayCode;
+        if (record.customShift === 'MORNING_8_5') {
+            displayCode = 'SC-M';
+        } else if (record.customShift === 'NIGHT_6_3') {
+            displayCode = 'SC-N6-3';
+        } else if (record.customShift === 'NIGHT_9_30_6_30') {
+            displayCode = 'SC-N9-6';
+        } else {
+            displayCode = 'SC';
+        }
+
+        badge = `<span class="badge bg-info text-dark" title="Shift Override: ${shiftName}"> ${displayCode}</span>`;
+        // --- END: UPDATED SHIFT CODE LOGIC ---
+
         statusText = `SC (${record.customShift})`;
         extraClass += ' custom-shift';
+      } else if (record.status === 'PRESENT') {
+        badge = '<span class="badge bg-success">P</span>';
+        statusText = 'P';
       }
     } else if(!isWeekend && !isHoliday && !isBeforeJoinDate){
       // Default to Present only AFTER Join Date
@@ -1756,7 +1774,6 @@ function renderDepartmentSummary(month){
   );
 }
 
-
 function renderDeptMonthlySummary() {
   const dept = document.getElementById('deptSummaryDept').value;
   const month = document.getElementById('deptSummaryMonth').value;
@@ -1797,8 +1814,8 @@ function renderDeptMonthlySummaryPage(dept, month) {
 
           if (record && record.status === 'LEAVE' && record.leaveType) {
               leaves[record.leaveType] = (leaves[record.leaveType] || 0) + 1; 
-          } else {
-              // Present or Shift Override
+          } else if (!record || record.status === 'PRESENT') {
+              // Present or Shift Override (default is always present if not leave)
               finalPresentDays++;
               // ENHANCEMENT 2: Calculate NSA using dynamic shift
               const nsaInfo = getDailyNsaInfo(emp, date);
@@ -1900,8 +1917,8 @@ function getYearlyReportData(year, deptFilter) {
                 if (record && record.status === 'LEAVE' && record.leaveType) {
                     leaves[record.leaveType] = (leaves[record.leaveType] || 0) + 1;
                     yearlyLeaves[record.leaveType] += 1;
-                } else {
-                    // Present or Shift Override
+                } else if (!record || record.status === 'PRESENT') {
+                    // Present or Shift Override (default is always present if not leave)
                     presentDays++;
                     // ENHANCEMENT 2: Calculate NSA using dynamic shift
                     const nsaInfo = getDailyNsaInfo(emp, date);
@@ -1976,7 +1993,7 @@ function viewMonthlyBreakdown() {
     const reportData = getYearlyReportData(year, deptFilter);
 
     if (reportData.length === 0) {
-        alert('No data to display. Please generate the Yearly Summary first.');
+        alert('No data to display. Generate the Yearly Summary first.');
         return;
     }
 
@@ -2286,7 +2303,7 @@ function exportDeptMonthlySummary() {
 
           if (record && record.status === 'LEAVE' && record.leaveType) {
               leaves[record.leaveType] = (leaves[record.leaveType] || 0) + 1; 
-          } else {
+          } else if (!record || record.status === 'PRESENT') {
               finalPresentDays++;
               // ENHANCEMENT 2: Calculate NSA using dynamic shift
               const nsaInfo = getDailyNsaInfo(emp, date);
