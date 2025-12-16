@@ -278,11 +278,14 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="monthlyBreakdownTitle">Monthly Breakdown</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-success" onclick="exportMonthlyBreakdown()">Export to Excel</button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
       </div>
       <div class="modal-body">
         <div class="table-responsive">
-            <table class="table table-bordered table-sm monthly-breakdown-table">
+            <table class="table table-bordered table-sm monthly-breakdown-table" id="monthlyBreakdownTable">
                 <thead id="monthlyBreakdownHeader" class="table-light"></thead>
                 <tbody id="monthlyBreakdownBody"></tbody>
                 <tfoot id="monthlyBreakdownFooter"></tfoot>
@@ -296,6 +299,12 @@
   </div>
 </div>
 
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <span class="navbar-brand">Leave & NSA Tracker</span>
+  </div>
+</nav>
 
 <div class="container-fluid p-4">
 
@@ -511,11 +520,14 @@
                                     <th>Employee</th>
                                     <th>Department</th>
                                     <th>Present Days</th>
+                                    <th>M-Shift (SC-M)</th>
+                                    <th>N1-Shift (SC-N6-3)</th>
+                                    <th>N2-Shift (SC-N9-6)</th>
                                     <th>Total NSA (₹)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="4" class="text-center text-muted">Summary will appear after clicking 'View Summary' above.</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted">Summary will appear after clicking 'View Summary' above.</td></tr>
                             </tbody>
                         </table>
                         <nav><ul class="pagination" id="deptSummaryPagination"></ul></nav>
@@ -553,7 +565,10 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Employee</th>
-                                    <th>P</th>
+                                    <th>P (Total)</th>
+                                    <th>M-Shift (SC-M)</th>
+                                    <th>N1-Shift (SC-N6-3)</th>
+                                    <th>N2-Shift (SC-N9-6)</th>
                                     <th>PL</th>
                                     <th>CL</th>
                                     <th>SL</th>
@@ -562,7 +577,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="7" class="text-center text-muted">Select a department and month to view breakdown.</td></tr>
+                                <tr><td colspan="10" class="text-center text-muted">Select a department and month to view breakdown.</td></tr>
                             </tbody>
                         </table>
                         <nav><ul class="pagination" id="deptMonthlySummaryPagination"></ul></nav>
@@ -602,6 +617,9 @@
                                     <th>Employee</th>
                                     <th>Department</th>
                                     <th>P (Total)</th>
+                                    <th>M-Shift (SC-M)</th>
+                                    <th>N1-Shift (SC-N6-3)</th>
+                                    <th>N2-Shift (SC-N9-6)</th>
                                     <th>PL</th>
                                     <th>CL</th>
                                     <th>SL</th>
@@ -610,7 +628,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="8" class="text-center text-muted">Select a year and click 'Generate Yearly Summary'.</td></tr>
+                                <tr><td colspan="11" class="text-center text-muted">Select a year and click 'Generate Yearly Summary'.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -659,6 +677,15 @@ const DEFAULT_NSA_RULES = {
     NIGHT_6_3: { name: 'Night (6PM–3AM)', amount: 350 }, 
     NIGHT_9_30_6_30: { name: 'Night (9:30PM–6:30AM)', amount: 400 } 
 };
+const SHIFT_KEYS = ['MORNING_8_5', 'NIGHT_6_3', 'NIGHT_9_30_6_30']; // Ordered for reports
+
+// Helper to get short display code for shifts
+function getShiftDisplayCode(shiftKey) {
+    if (shiftKey === 'MORNING_8_5') return 'SC-M';
+    if (shiftKey === 'NIGHT_6_3') return 'SC-N6-3';
+    if (shiftKey === 'NIGHT_9_30_6_30') return 'SC-N9-6';
+    return 'SC';
+}
 
 
 let selectedDates = [];
@@ -1378,17 +1405,8 @@ function renderCalendar(){
         const shiftName = getNsaRules()[record.customShift]?.name || 'Shift Change';
         
         // --- START: UPDATED SHIFT CODE LOGIC ---
-        let displayCode;
-        if (record.customShift === 'MORNING_8_5') {
-            displayCode = 'SC-M';
-        } else if (record.customShift === 'NIGHT_6_3') {
-            displayCode = 'SC-N6-3';
-        } else if (record.customShift === 'NIGHT_9_30_6_30') {
-            displayCode = 'SC-N9-6';
-        } else {
-            displayCode = 'SC';
-        }
-
+        let displayCode = getShiftDisplayCode(record.customShift);
+        
         badge = `<span class="badge bg-info text-dark" title="Shift Override: ${shiftName}"> ${displayCode}</span>`;
         // --- END: UPDATED SHIFT CODE LOGIC ---
 
@@ -1541,7 +1559,7 @@ function loadSummaryTabDefaults() {
 
 function hideEmployeeSummary(){
   document.getElementById('employeeSummary').innerHTML = '<div class="alert alert-info text-center">Select an employee and month, and click \'View Summary\' above.</div>';
-  document.querySelector('#deptSummaryTable tbody').innerHTML = '<tr><td colspan="4" class="text-center text-muted">Summary will appear after clicking \'View Summary\' above.</td></tr>';
+  document.querySelector('#deptSummaryTable tbody').innerHTML = '<tr><td colspan="7" class="text-center text-muted">Summary will appear after clicking \'View Summary\' above.</td></tr>';
   document.getElementById('deptSummaryPagination').innerHTML = '';
   document.getElementById('backSummaryBtn').classList.add('d-none');
   
@@ -1552,7 +1570,7 @@ function hideEmployeeSummary(){
 }
 
 function hideDeptSummary() {
-  document.querySelector('#deptMonthlySummary tbody').innerHTML = '<tr><td colspan="7" class="text-center text-muted">Select a department and month to view breakdown.</td></tr>';
+  document.querySelector('#deptMonthlySummary tbody').innerHTML = '<tr><td colspan="10" class="text-center text-muted">Select a department and month to view breakdown.</td></tr>';
   document.getElementById('deptMonthlySummaryPagination').innerHTML = '';
   document.getElementById('backDeptSummaryBtn').classList.add('d-none');
 
@@ -1564,6 +1582,53 @@ function hideDeptSummary() {
 /*********************
  * MONTHLY SUMMARY LOGIC
  *********************/
+function getMonthlyReportData(emp, month) {
+    const [year, m] = month.split('-').map(Number);
+    const allWorkingDaysInMonth = getWorkingDays(year, m); 
+    const nsaRules = getNsaRules();
+
+    // ENHANCEMENT 1: Determine valid working days for this employee
+    const validWorkingDays = allWorkingDaysInMonth.filter(date => date >= emp.joinDate);
+    
+    const records = getAttendance().filter(a => a.empId === emp.id && a.date.startsWith(month));
+
+    let leaves = { PL:0, CL:0, SL:0, FL:0 };
+    let finalPresentDays = 0;
+    let totalNsaAmount = 0;
+    let shiftBreakdown = { MORNING_8_5: 0, NIGHT_6_3: 0, NIGHT_9_30_6_30: 0 }; // Days per shift type
+
+    // 1. Calculate leaves & present days with shift breakdown
+    validWorkingDays.forEach(date => {
+        const record = records.find(r => r.date === date);
+        
+        if (record && record.status === 'LEAVE' && record.leaveType) {
+            leaves[record.leaveType]++; 
+        } else {
+            // Treat as present (default or shift override)
+            finalPresentDays++;
+            
+            // Calculate NSA using dynamic shift
+            const nsaInfo = getDailyNsaInfo(emp, date);
+            totalNsaAmount += nsaInfo.amount;
+            
+            // Store breakdown based on the effective shift key
+            const shiftKey = nsaInfo.shift;
+            if (shiftBreakdown.hasOwnProperty(shiftKey)) {
+                shiftBreakdown[shiftKey]++;
+            }
+        }
+    });
+
+    return { 
+        leaves, 
+        finalPresentDays, 
+        totalNsaAmount, 
+        shiftBreakdown,
+        validWorkingDaysCount: validWorkingDays.length
+    };
+}
+
+
 function renderEmployeeSummary(){
   const empId = document.getElementById('summaryEmployee').value; 
   const month = summaryMonth.value;
@@ -1572,77 +1637,41 @@ function renderEmployeeSummary(){
   const emp = getEmployees().find(e => e.id === empId);
   if (!emp) { alert('Employee not found or inactive.'); return; }
   
-  const [year, m] = month.split('-').map(Number);
-  const allWorkingDaysInMonth = getWorkingDays(year, m); 
-  const validWorkingDays = allWorkingDaysInMonth.filter(date => date >= emp.joinDate);
+  const report = getMonthlyReportData(emp, month);
+  const { leaves, finalPresentDays, totalNsaAmount, shiftBreakdown, validWorkingDaysCount } = report;
   const nsaRules = getNsaRules();
-
-  const records = getAttendance().filter(a => a.empId === empId && a.date.startsWith(month));
-
-  let leaves = { PL:0, CL:0, SL:0, FL:0 };
-  let finalPresentDays = 0;
-  let totalNsaAmount = 0;
-  let shiftBreakdown = {}; // To store P days per shift type
-
-  // 1. Calculate leaves
-  records.filter(r => r.status === 'LEAVE' && r.leaveType)
-         .forEach(r => { 
-             if (validWorkingDays.includes(r.date)) {
-                 leaves[r.leaveType]++; 
-             }
-         });
-  
-  const totalLeaves = Object.values(leaves).reduce((a,b)=>a+b, 0);
-  
-  // 2. Calculate Present Days and NSA with Breakdown
-  validWorkingDays.forEach(date => {
-      const isLeave = records.some(r => r.date === date && r.status === 'LEAVE');
-      
-      if (!isLeave) {
-          finalPresentDays++;
-          
-          // Calculate NSA using dynamic shift
-          const nsaInfo = getDailyNsaInfo(emp, date);
-          totalNsaAmount += nsaInfo.amount;
-          
-          // Store breakdown based on the effective shift key
-          const shiftKey = nsaInfo.shift;
-          if (!shiftBreakdown[shiftKey]) {
-              shiftBreakdown[shiftKey] = { days: 0, nsa: 0 };
-          }
-          shiftBreakdown[shiftKey].days++;
-          shiftBreakdown[shiftKey].nsa += nsaInfo.amount;
-      }
-  });
 
     // 3. Generate Breakdown HTML
     let breakdownHtml = '<p class="fw-bold">Present Days Breakdown by Shift:</p><ul class="list-unstyled">';
     let breakdownCount = 0;
-    for (const key in shiftBreakdown) {
-        if (shiftBreakdown[key].days > 0) {
+    
+    SHIFT_KEYS.forEach(key => {
+        const days = shiftBreakdown[key] || 0;
+        if (days > 0) {
             const shiftName = nsaRules[key]?.name || key;
             const nsaPerDay = nsaRules[key]?.amount || 0;
-            const totalNsa = shiftBreakdown[key].nsa;
+            const totalNsa = days * nsaPerDay;
             
             breakdownHtml += `
                 <li>
-                    <strong>${shiftBreakdown[key].days} Day(s)</strong> in ${shiftName} 
+                    <strong>${days} Day(s)</strong> in ${shiftName} 
                     <small class="text-muted">(₹${nsaPerDay} / day)</small> 
                     <span class="badge bg-primary float-end">NSA: ₹${totalNsa}</span>
                 </li>`;
             breakdownCount++;
         }
-    }
+    });
+    
     if (breakdownCount === 0 && finalPresentDays > 0) {
-        // Fallback for cases where employee is present but has zero NSA shift (shouldn't happen with correct data)
+        // Fallback for cases where employee is present but has zero NSA shift 
         const shiftName = nsaRules[emp.shift]?.name || emp.shift;
-        breakdownHtml += `<li><strong>${finalPresentDays} Day(s)</strong> in ${shiftName} (No NSA)</li>`;
+        breakdownHtml += `<li><strong>${finalPresentDays} Day(s)</strong> in ${shiftName} (Zero NSA Default Shift)</li>`;
     }
     breakdownHtml += '</ul>';
 
   document.getElementById('employeeSummary').innerHTML = `
     <div class="row g-3">
-        <div class="col-md-4"><div class="card p-3 bg-light">Total Valid Working Days<br><strong>${validWorkingDays.length}</strong></div></div>
+        <div class="col-md-4"><div class="card p-3 bg-light">Total Valid Working Days<br><strong>${validWorkingDaysCount}</strong></div></div>
         <div class="col-md-4"><div class="card p-3 bg-success text-white">Actual Present Days<br><strong>${finalPresentDays}</strong></div></div>
         <div class="col-md-4"><div class="card p-3 bg-primary text-white">Leaves (PL/CL/SL/FL)<br><strong>${leaves.PL}/${leaves.CL}/${leaves.SL}/${leaves.FL}</strong></div></div>
         <div class="col-md-12"><div class="card p-3 bg-info text-white">Final NSA Amount Earned<br><strong>₹${totalNsaAmount}</strong></div></div>
@@ -1716,34 +1745,16 @@ function renderDepartmentSummary(month){
   const tbody=document.querySelector('#deptSummaryTable tbody');
   tbody.innerHTML='';
   
-  const [year, m] = month.split('-').map(Number);
-  const allWorkingDaysInMonth = getWorkingDays(year, m); 
-
   const reportData = [];
   getEmployees().filter(emp => emp.status === 'Active').forEach(emp=>{
     
-    // ENHANCEMENT 1: Determine valid working days for this employee
-    const validWorkingDays = allWorkingDaysInMonth.filter(date => date >= emp.joinDate);
-    if (validWorkingDays.length === 0) return; 
+    const report = getMonthlyReportData(emp, month);
+    const { finalPresentDays, totalNsaAmount, shiftBreakdown, validWorkingDaysCount } = report;
 
-    const records=getAttendance().filter(a=>a.empId===emp.id && a.date.startsWith(month));
-    
-    let finalPresentDays = 0;
-    let totalNsa = 0;
-    
-    validWorkingDays.forEach(date => {
-        const isLeave = records.some(r => r.date === date && r.status === 'LEAVE');
-        
-        if (!isLeave) {
-            finalPresentDays++;
-            // ENHANCEMENT 2: Calculate NSA using dynamic shift
-            const nsaInfo = getDailyNsaInfo(emp, date);
-            totalNsa += nsaInfo.amount;
-        }
-    });
-    
-    if(finalPresentDays > 0 || records.length > 0) {
-      reportData.push({ emp, days: finalPresentDays, nsa: totalNsa });
+    if (validWorkingDaysCount === 0) return; 
+
+    if(finalPresentDays > 0 || Object.values(report.leaves).some(l => l > 0)) {
+      reportData.push({ emp, days: finalPresentDays, nsa: totalNsaAmount, breakdown: shiftBreakdown });
     }
   });
 
@@ -1753,14 +1764,21 @@ function renderDepartmentSummary(month){
   const start = (deptSummaryPage - 1) * ROWS_PER_PAGE;
   
   if (reportData.length === 0) {
-       tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No attendance data or NSA recorded for this month.</td></tr>';
+       tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No attendance data or NSA recorded for this month.</td></tr>';
        document.getElementById('deptSummaryPagination').innerHTML = '';
        return;
   }
 
   reportData.slice(start, start + ROWS_PER_PAGE).forEach(item => {
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${item.emp.name}</td><td>${item.emp.department}</td><td>${item.days}</td><td>₹${item.nsa}</td>`;
+    tr.innerHTML=`
+        <td>${item.emp.name}</td>
+        <td>${item.emp.department}</td>
+        <td>${item.days}</td>
+        <td>${item.breakdown.MORNING_8_5 || 0}</td>
+        <td>${item.breakdown.NIGHT_6_3 || 0}</td>
+        <td>${item.breakdown.NIGHT_9_30_6_30 || 0}</td>
+        <td>₹${item.nsa}</td>`;
     tbody.appendChild(tr);
   });
 
@@ -1790,44 +1808,18 @@ function renderDeptMonthlySummaryPage(dept, month) {
   const tbody = document.querySelector('#deptMonthlySummary tbody');
   tbody.innerHTML = '';
 
-  const [year, m] = month.split('-').map(Number);
-  const allWorkingDaysInMonth = getWorkingDays(year, m);
-  const nsaRules = getNsaRules();
-
   const reportData = [];
   getEmployees()
     .filter(emp => emp.department === dept && emp.status==='Active')
     .forEach(emp => {
         
-      // ENHANCEMENT 1: Determine valid working days for this employee
-      const validWorkingDays = allWorkingDaysInMonth.filter(date => date >= emp.joinDate);
-      if (validWorkingDays.length === 0) return; 
-        
-      const records = getAttendance().filter(a => a.empId === emp.id && a.date.startsWith(month));
+      const report = getMonthlyReportData(emp, month);
+      const { leaves, finalPresentDays, totalNsaAmount, shiftBreakdown, validWorkingDaysCount } = report;
 
-      let leaves = { PL:0, CL:0, SL:0, FL:0 };
-      let finalPresentDays = 0;
-      let totalNsaAmount = 0;
+      if (validWorkingDaysCount === 0) return; 
 
-      validWorkingDays.forEach(date => {
-          const record = records.find(r => r.date === date);
-
-          if (record && record.status === 'LEAVE' && record.leaveType) {
-              leaves[record.leaveType] = (leaves[record.leaveType] || 0) + 1; 
-          } else if (!record || record.status === 'PRESENT') {
-              // Present or Shift Override (default is always present if not leave)
-              finalPresentDays++;
-              // ENHANCEMENT 2: Calculate NSA using dynamic shift
-              const nsaInfo = getDailyNsaInfo(emp, date);
-              totalNsaAmount += nsaInfo.amount;
-          }
-      });
-      
-      const totalLeaves = Object.values(leaves).reduce((a,b)=>a+b, 0);
-
-
-      if(finalPresentDays > 0 || totalLeaves > 0) {
-          reportData.push({ emp, finalPresentDays, leaves, nsaAmount: totalNsaAmount });
+      if(finalPresentDays > 0 || Object.values(leaves).some(l => l > 0)) {
+          reportData.push({ emp, finalPresentDays, leaves, nsaAmount: totalNsaAmount, breakdown: shiftBreakdown });
       }
     });
 
@@ -1837,7 +1829,7 @@ function renderDeptMonthlySummaryPage(dept, month) {
   const start = (deptMonthlySummaryPage - 1) * ROWS_PER_PAGE;
   
   if (reportData.length === 0) {
-       tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No attendance data or NSA recorded for this department this month.</td></tr>';
+       tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No attendance data or NSA recorded for this department this month.</td></tr>';
        document.getElementById('deptMonthlySummaryPagination').innerHTML = '';
        document.getElementById('backDeptSummaryBtn').classList.remove('d-none');
        return;
@@ -1848,6 +1840,9 @@ function renderDeptMonthlySummaryPage(dept, month) {
     tr.innerHTML = `
       <td>${item.emp.name}</td>
       <td>${item.finalPresentDays}</td>
+      <td>${item.breakdown.MORNING_8_5 || 0}</td>
+      <td>${item.breakdown.NIGHT_6_3 || 0}</td>
+      <td>${item.breakdown.NIGHT_9_30_6_30 || 0}</td>
       <td>${item.leaves.PL}</td>
       <td>${item.leaves.CL}</td>
       <td>${item.leaves.SL}</td>
@@ -1896,7 +1891,7 @@ function getYearlyReportData(year, deptFilter) {
         let yearlyPresentDays = 0;
         let yearlyLeaves = { PL:0, CL:0, SL:0, FL:0 };
         let yearlyNSA = 0;
-
+        let yearlyShiftBreakdown = { MORNING_8_5: 0, NIGHT_6_3: 0, NIGHT_9_30_6_30: 0 }; // Added Yearly Breakdown
 
         allMonths.forEach(monthKey => {
             const monthPrefix = `${year}-${monthKey}`;
@@ -1910,6 +1905,7 @@ function getYearlyReportData(year, deptFilter) {
             let leaves = { PL:0, CL:0, SL:0, FL:0 };
             let presentDays = 0;
             let nsa = 0;
+            let shiftBreakdown = { MORNING_8_5: 0, NIGHT_6_3: 0, NIGHT_9_30_6_30: 0 };
 
             validWorkingDays.forEach(date => {
                 const record = empAttendance.find(r => r.date === date);
@@ -1923,21 +1919,28 @@ function getYearlyReportData(year, deptFilter) {
                     // ENHANCEMENT 2: Calculate NSA using dynamic shift
                     const nsaInfo = getDailyNsaInfo(emp, date);
                     nsa += nsaInfo.amount;
+                    
+                    // Track breakdown
+                    if (shiftBreakdown.hasOwnProperty(nsaInfo.shift)) {
+                        shiftBreakdown[nsaInfo.shift]++;
+                        yearlyShiftBreakdown[nsaInfo.shift]++; // Accumulate yearly
+                    }
                 }
             });
             
             yearlyPresentDays += presentDays;
             yearlyNSA += nsa;
 
-            empReport.monthly[monthKey] = { presentDays, leaves, nsa };
+            empReport.monthly[monthKey] = { presentDays, leaves, nsa, breakdown: shiftBreakdown };
         });
 
         empReport.presentDays = yearlyPresentDays;
         empReport.leaves = yearlyLeaves;
         empReport.nsa = yearlyNSA;
+        empReport.yearlyBreakdown = yearlyShiftBreakdown; // Attach yearly breakdown
 
         return empReport;
-    }).filter(item => item.presentDays > 0 || item.leaves.PL > 0 || item.leaves.CL > 0 || item.leaves.SL > 0 || item.leaves.FL > 0);
+    }).filter(item => item.presentDays > 0 || Object.values(item.leaves).some(l => l > 0));
     
     return reportData;
 }
@@ -1950,14 +1953,14 @@ function renderYearlySummary() {
   tbody.innerHTML = '';
 
   if (!year || year.length !== 4) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Please enter a valid 4-digit year.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger">Please enter a valid 4-digit year.</td></tr>';
     return;
   }
   
   const reportData = getYearlyReportData(year, deptFilter);
   
   if (reportData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No attendance data or NSA recorded for this group.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">No attendance data or NSA recorded for this group.</td></tr>';
     return;
   }
 
@@ -1968,6 +1971,9 @@ function renderYearlySummary() {
       <td>${item.name}</td>
       <td>${item.department}</td>
       <td>${item.presentDays}</td>
+      <td>${item.yearlyBreakdown.MORNING_8_5}</td>
+      <td>${item.yearlyBreakdown.NIGHT_6_3}</td>
+      <td>${item.yearlyBreakdown.NIGHT_9_30_6_30}</td>
       <td>${item.leaves.PL}</td>
       <td>${item.leaves.CL}</td>
       <td>${item.leaves.SL}</td>
@@ -2020,13 +2026,28 @@ function renderMonthlyBreakdown(reportData, year, deptFilter) {
     headerRow2.innerHTML += ``; 
 
     const allMonths = Object.keys(reportData[0].monthly).sort(); 
+    
+    const shiftCodes = {
+        MORNING_8_5: 'SC-M',
+        NIGHT_6_3: 'SC-N6-3',
+        NIGHT_9_30_6_30: 'SC-N9-6'
+    };
 
     allMonths.forEach(monthKey => {
         const monthName = MONTH_NAMES[parseInt(monthKey) - 1];
 
-        headerRow1.innerHTML += `<th colspan="6" class="text-center">${monthName}</th>`;
+        // 5 columns for breakdown + 4 for leaves + 1 for NSA = 10 columns
+        headerRow1.innerHTML += `<th colspan="10" class="text-center">${monthName}</th>`;
         
-        headerRow2.innerHTML += `<th>P</th><th>PL</th><th>CL</th><th>SL</th><th>FL</th><th>NSA</th>`;
+        headerRow2.innerHTML += `
+            <th>P(T)</th>
+            <th>${shiftCodes.MORNING_8_5}</th>
+            <th>${shiftCodes.NIGHT_6_3}</th>
+            <th>${shiftCodes.NIGHT_9_30_6_30}</th>
+            <th>PL</th><th>CL</th><th>SL</th><th>FL</th>
+            <th>NSA(₹)</th>
+            <th>W Days</th>
+            `;
     });
 
     headerRow1.innerHTML += `<th rowspan="2">Yearly P</th><th rowspan="2">Yearly L</th><th rowspan="2">Yearly NSA (₹)</th>`;
@@ -2043,14 +2064,23 @@ function renderMonthlyBreakdown(reportData, year, deptFilter) {
 
         allMonths.forEach(monthKey => {
             const data = item.monthly[monthKey];
+            const validWorkingDays = getWorkingDays(Number(year), Number(monthKey));
             
+            // Filter valid working days by employee join date
+            const empWorkingDays = validWorkingDays.filter(date => date >= item.joinDate);
+
+
             tr.innerHTML += `
                 <td>${data.presentDays}</td>
+                <td>${data.breakdown.MORNING_8_5}</td>
+                <td>${data.breakdown.NIGHT_6_3}</td>
+                <td>${data.breakdown.NIGHT_9_30_6_30}</td>
                 <td>${data.leaves.PL}</td>
                 <td>${data.leaves.CL}</td>
                 <td>${data.leaves.SL}</td>
                 <td>${data.leaves.FL}</td>
                 <td>₹${data.nsa}</td>
+                <td>${empWorkingDays.length}</td>
             `;
         });
 
@@ -2077,12 +2107,28 @@ function renderMonthlyBreakdown(reportData, year, deptFilter) {
         let monthTotalP = 0;
         let monthTotalL = 0;
         let monthTotalNSA = 0;
+        let monthTotalSCM = 0;
+        let monthTotalSCN1 = 0;
+        let monthTotalSCN2 = 0;
+        let monthTotalPL = 0;
+        let monthTotalCL = 0;
+        let monthTotalSL = 0;
+        let monthTotalFL = 0;
+        let monthTotalW = getWorkingDays(Number(year), Number(monthKey)).length;
+
 
         reportData.forEach(item => {
             const data = item.monthly[monthKey];
             monthTotalP += data.presentDays;
             monthTotalL += data.leaves.PL + data.leaves.CL + data.leaves.SL + data.leaves.FL;
             monthTotalNSA += data.nsa;
+            monthTotalSCM += data.breakdown.MORNING_8_5;
+            monthTotalSCN1 += data.breakdown.NIGHT_6_3;
+            monthTotalSCN2 += data.breakdown.NIGHT_9_30_6_30;
+            monthTotalPL += data.leaves.PL;
+            monthTotalCL += data.leaves.CL;
+            monthTotalSL += data.leaves.SL;
+            monthTotalFL += data.leaves.FL;
         });
         
         grandTotalP += monthTotalP;
@@ -2092,11 +2138,15 @@ function renderMonthlyBreakdown(reportData, year, deptFilter) {
 
         totalRow.innerHTML += `
             <td>${monthTotalP}</td>
-            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.PL, 0)}</td>
-            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.CL, 0)}</td>
-            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.SL, 0)}</td>
-            <td>${reportData.reduce((sum, item) => sum + item.monthly[monthKey].leaves.FL, 0)}</td>
+            <td>${monthTotalSCM}</td>
+            <td>${monthTotalSCN1}</td>
+            <td>${monthTotalSCN2}</td>
+            <td>${monthTotalPL}</td>
+            <td>${monthTotalCL}</td>
+            <td>${monthTotalSL}</td>
+            <td>${monthTotalFL}</td>
             <td>₹${monthTotalNSA}</td>
+            <td>${monthTotalW}</td>
         `;
     });
 
@@ -2244,35 +2294,35 @@ function exportEmpSummary(){
   const exportData = validWorkingDays.map(date => {
       const record = records.find(r => r.date === date);
       const isLeave = record && record.status === 'LEAVE';
+      const nsaInfo = getDailyNsaInfo(emp, date);
       
       let status = 'PRESENT (Default)';
       let leaveType = '';
       let shift = emp.shift;
-      let nsaAmount = getDailyNsaInfo(emp, date).amount;
       
       if(isLeave) {
           status = 'LEAVE';
           leaveType = record.leaveType || '';
           shift = 'N/A';
-          nsaAmount = 0;
-      } else if (record && record.customShift) { // ENHANCEMENT 2
+      } else if (record && record.customShift) { 
           status = 'PRESENT (Shift Override)';
           shift = record.customShift;
       }
       
       return {
           Date: date,
+          'Day of Week': DAY_NAMES[new Date(date).getDay()],
           Status: status,
           LeaveType: leaveType,
-          Shift: shift,
-          'NSA Amount (₹)': nsaAmount
+          'Effective Shift Key': shift,
+          'NSA Amount (₹)': isLeave ? 0 : nsaInfo.amount
       };
   });
   
   const ws=XLSX.utils.json_to_sheet(exportData);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,`${emp.name} Summary`);
-  XLSX.writeFile(wb,`${emp.name}_Summary.xlsx`);
+  XLSX.writeFile(wb,`${emp.name}_Monthly_Details.xlsx`);
 }
 
 function exportDeptMonthlySummary() {
@@ -2288,41 +2338,22 @@ function exportDeptMonthlySummary() {
     .filter(e => e.department === dept && e.status==='Active')
     .forEach(emp => {
         
-      // ENHANCEMENT 1: Determine valid working days for this employee
-      const validWorkingDays = allWorkingDaysInMonth.filter(date => date >= emp.joinDate);
-      if (validWorkingDays.length === 0) return; 
-        
-      const records = getAttendance().filter(a => a.empId===emp.id && a.date.startsWith(month));
-      
-      let leaves = { PL:0, CL:0, SL:0, FL:0 };
-      let finalPresentDays = 0;
-      let totalNsaAmount = 0;
+      const report = getMonthlyReportData(emp, month);
+      const { leaves, finalPresentDays, totalNsaAmount, shiftBreakdown, validWorkingDaysCount } = report;
 
-      validWorkingDays.forEach(date => {
-          const record = records.find(r => r.date === date);
-
-          if (record && record.status === 'LEAVE' && record.leaveType) {
-              leaves[record.leaveType] = (leaves[record.leaveType] || 0) + 1; 
-          } else if (!record || record.status === 'PRESENT') {
-              finalPresentDays++;
-              // ENHANCEMENT 2: Calculate NSA using dynamic shift
-              const nsaInfo = getDailyNsaInfo(emp, date);
-              totalNsaAmount += nsaInfo.amount;
-          }
-      });
-      
-      const totalLeaves = Object.values(leaves).reduce((a,b)=>a+b, 0);
-
-      if(finalPresentDays === 0 && totalLeaves === 0) return;
+      if (validWorkingDaysCount === 0 || (finalPresentDays === 0 && Object.values(leaves).every(l => l === 0))) return;
 
       data.push({
         Employee: emp.name,
         'Working Days (P)': finalPresentDays,
+        'M-Shift (SC-M)': shiftBreakdown.MORNING_8_5,
+        'N1-Shift (SC-N6-3)': shiftBreakdown.NIGHT_6_3,
+        'N2-Shift (SC-N9-6)': shiftBreakdown.NIGHT_9_30_6_30,
         PL: leaves.PL,
         CL: leaves.CL,
         SL: leaves.SL,
         FL: leaves.FL,
-        'NSA Amount (₹)': totalNsaAmount
+        'Total NSA (₹)': totalNsaAmount
       });
     });
 
@@ -2331,7 +2362,7 @@ function exportDeptMonthlySummary() {
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, `${dept}_${month}`);
-  XLSX.writeFile(wb, `${dept}_${month}_Summary.xlsx`);
+  XLSX.writeFile(wb, `${dept}_${month}_Breakdown.xlsx`);
 }
 
 function exportYearlySummary() {
@@ -2346,6 +2377,21 @@ function exportYearlySummary() {
   
   const wb = XLSX.utils.table_to_book(table, { sheet: `${dept}_${year}_Summary` });
   XLSX.writeFile(wb, `${dept}_${year}_Yearly_Summary.xlsx`);
+}
+
+function exportMonthlyBreakdown() {
+  const table = document.getElementById('monthlyBreakdownTable');
+  const year = document.getElementById('yearlySummaryYear').value;
+  const dept = document.getElementById('yearlySummaryDept').value || 'All';
+  
+  if (!table || table.querySelector('tbody').children.length === 0) {
+    alert('No data to export. Generate the Yearly Summary and view the breakdown table first.');
+    return;
+  }
+  
+  // Use table_to_book which handles merged headers
+  const wb = XLSX.utils.table_to_book(table, { sheet: `${dept}_${year}_Monthly_Breakdown`, raw: true });
+  XLSX.writeFile(wb, `${dept}_${year}_Monthly_Breakdown_Detailed.xlsx`);
 }
 
 
@@ -2408,4 +2454,4 @@ function handleExcelUpload(event) {
 
 </script>
 </body>
-</html>
+</html>s
