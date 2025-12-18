@@ -13,97 +13,169 @@
 
 
   <style>
-    body { background:#f5f7fb; }
-    .card { border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.05); }
-    .badge-shift { font-size:.75rem; }
-    .date-cell { transition: all 0.2s ease; cursor:pointer; }
-    .date-cell.selected { background-color:#0d6efd; color:#fff; border-radius:8px; }
-    .btn-action { margin-right:5px; }
-    #employeeSearch { max-width:250px; margin-bottom:10px; }
-    .weekend { background-color: #f8d7da; } /* light red/pink */
-    .holiday { background-color: #ffecb5; border: 2px solid #ffc107; } /* light yellow/orange for holiday */
-    /* ENHANCEMENT 1: TBH and custom shift styling */
-    .tbh { background-color: #e9ecef; color: #6c757d; } /* To Be Hired/Confirmed */
-    .custom-shift { border: 2px solid #0dcaf0; background-color: #e0f7fa; } /* Light cyan for shift change */
+    body { background:#f5f7fb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .card { border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.05); border: none; }
     
-    .date-day {
-        font-size: 0.7rem;
-        color: #6c757d; /* Muted color for the day name */
-        margin-bottom: 2px;
-    }
-    .weekend .date-day { color: #dc3545; } /* Red for weekend day name */
-    .holiday .date-day { color: #ffc107; } /* Yellow for holiday day name */
-    .date-cell.selected .date-day { color: #fff; } /* White when selected */
-    /* --- CALENDAR UI GRID CHANGE --- */
+    /* --- CALENDAR UI GRID --- */
     #calendar {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 10px; /* Space between cells */
+        gap: 8px; /* Slightly tighter gap for a cleaner look */
     }
+    
     .calendar-header {
         text-align: center;
         font-weight: bold;
-        padding: 8px 0;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-    }
-    .date-cell-container {
-        padding: 5px;
-    }
-    .blank-cell {
-        background-color: #f4f4f4;
+        padding: 10px 0;
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
         border-radius: 8px;
-        min-height: 80px;
-    }
-    .date-cell {
-        min-height: 80px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        margin-bottom: 5px;
     }
 
-    /* --- STYLES FOR SEARCHABLE DROPDOWN --- */
+    /* --- UPDATED DATE CELL FOR FULL-BOX HIGHLIGHTING --- */
+    .date-cell {
+        min-height: 110px; /* Increased height for full text descriptions */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 10px !important;
+        cursor: pointer;
+        transition: transform 0.1s ease, background-color 0.2s ease;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background-color: #ffffff;
+        position: relative;
+    }
+
+    .date-cell:hover {
+        transform: scale(1.02);
+        z-index: 2;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    /* MANAGER'S REQUEST: FULL CELL HIGHLIGHTING COLORS */
+    
+    /* Green for Present */
+    .status-present { 
+        background-color: #d1e7dd !important; 
+        color: #0f5132 !important; 
+        border-color: #badbcc !important; 
+    }
+    
+    /* Light Red for Leaves */
+    .status-leave { 
+        background-color: #f8d7da !important; 
+        color: #842029 !important; 
+        border-color: #f5c2c7 !important; 
+    }
+    
+    /* Light Cyan for Shift Overrides */
+    .status-override { 
+        background-color: #cff4fc !important; 
+        color: #055160 !important; 
+        border: 2px solid #0dcaf0 !important; 
+    }
+
+    /* Yellow for Holidays with readable text */
+    .status-holiday { 
+        background-color: #fff3cd !important; 
+        color: #664d03 !important; 
+        border: 2px solid #ffecb5 !important; 
+    }
+
+    /* Gray for Weekends */
+    .weekend { 
+        background-color: #f8f9fa; 
+        color: #6c757d; 
+    }
+
+    /* To Be Hired */
+    .tbh { 
+        background-color: #e9ecef; 
+        color: #adb5bd; 
+        cursor: not-allowed; 
+    }
+
+    /* Selection Highlight (Blue Border) */
+    .date-cell.selected { 
+        border: 3px solid #0d6efd !important; 
+        box-shadow: inset 0 0 0 1px #fff; 
+    }
+
+    /* Text styling for the status names (Present, Shift Names, etc.) */
+    .badge-status-text {
+        margin-top: 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-align: center;
+        line-height: 1.2;
+        word-wrap: break-word;
+        width: 100%;
+    }
+
+    .date-day {
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    /* --- OTHER UI ELEMENTS --- */
+    .blank-cell {
+        background-color: transparent;
+        border: none;
+        min-height: 110px;
+    }
+
     .search-results-container {
-      background: white;
-      border-radius: 8px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1050;
     }
+
     .search-item {
-      cursor: pointer;
-      transition: background 0.2s;
+        cursor: pointer;
+        transition: background 0.2s;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
     }
+
     .search-item:hover {
-      background-color: #f0f4ff;
+        background-color: #f0f4ff;
     }
-    /* ------------------------------------------- */
-    /* Monthly Breakdown Table Styling */
+
     .monthly-breakdown-table th {
-        vertical-align: top;
-        min-width: 50px;
+        font-size: 0.75rem;
+        vertical-align: middle;
+        background-color: #f8f9fa;
     }
-    .monthly-breakdown-table td {
-        white-space: nowrap;
-    }
+
     .total-row {
         font-weight: bold;
-        background-color: #e9ecef;
+        background-color: #e9ecef !important;
     }
-    /* Tab Styling */
+
     .nav-tabs .nav-link {
-        color: #495057;
         font-weight: bold;
+        color: #495057;
+        border: none;
+        padding: 12px 20px;
     }
+
     .nav-tabs .nav-link.active {
         color: #0d6efd;
-        background-color: #fff;
-        border-color: #dee2e6 #dee2e6 #fff;
+        border-bottom: 3px solid #0d6efd;
+        background: transparent;
     }
-    /* Shift Breakdown Card */
+
     .shift-breakdown-card {
-        background-color: #e3f2fd; /* Light blue background */
+        background-color: #e3f2fd;
         border: 1px solid #bbdefb;
+        border-radius: 12px;
     }
-  </style>
+</style>
 </head>
 <body>
 
@@ -681,10 +753,10 @@ const SHIFT_KEYS = ['MORNING_8_5', 'NIGHT_6_3', 'NIGHT_9_30_6_30']; // Ordered f
 
 // Helper to get short display code for shifts
 function getShiftDisplayCode(shiftKey) {
-    if (shiftKey === 'MORNING_8_5') return 'SC-M';
-    if (shiftKey === 'NIGHT_6_3') return 'SC-N6-3';
-    if (shiftKey === 'NIGHT_9_30_6_30') return 'SC-N9-6';
-    return 'SC';
+    if (shiftKey === 'MORNING_8_5') return 'Morning shift (8am–5pm)';
+    if (shiftKey === 'NIGHT_6_3') return 'Night shift (6pm–3am)';
+    if (shiftKey === 'NIGHT_9_30_6_30') return 'Night shift (9:30pm–6:30am)';
+    return 'Shift Change';
 }
 
 
@@ -1336,7 +1408,7 @@ function changeMonth(direction) {
 function renderCalendar(){
   selectedDates = [];
   const empId = document.getElementById('attendanceEmployee').value;
-  const month = attendanceMonth.value;
+  const month = document.getElementById('attendanceMonth').value; // Ensure ID is correct
   const calendar = document.getElementById('calendar');
   
   if(!empId || !month) {
@@ -1351,7 +1423,9 @@ function renderCalendar(){
   const [year, m] = month.split('-').map(Number);
   const daysInMonth = new Date(year, m, 0).getDate();
   calendar.innerHTML = '';
-  const holidays = getHolidays().map(h => h.date);
+  
+  // Get holidays list for the month
+  const holidayList = getHolidays();
 
   // 1. Calculate offset for the first day of the month
   const firstDayOfMonth = new Date(year, m - 1, 1).getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
@@ -1359,8 +1433,7 @@ function renderCalendar(){
   // 2. Add blank cells for padding
   for (let i = 0; i < firstDayOfMonth; i++) {
     const blankCell = document.createElement('div');
-    blankCell.className = 'date-cell-container';
-    blankCell.innerHTML = '<div class="blank-cell"></div>';
+    blankCell.className = 'blank-cell'; // Matches updated CSS
     calendar.appendChild(blankCell);
   }
 
@@ -1370,78 +1443,66 @@ function renderCalendar(){
     const dayIndex = dateObj.getDay(); 
     const date = `${month}-${String(d).padStart(2,'0')}`;
 
-    const container = document.createElement('div');
-    container.className = 'date-cell-container';
-
     const cell = document.createElement('div');
-    cell.className = 'border rounded p-2 text-center date-cell';
+    cell.className = 'date-cell'; // Base class
 
-    let badge = '';
+    let statusHtml = '';
     let extraClass = '';
-    let statusText = '';
     
     const isWeekend = (dayIndex === 0 || dayIndex === 6);
-    const isHoliday = holidays.includes(date);
+    const holidayObj = holidayList.find(h => h.date === date);
     const isBeforeJoinDate = date < joinDate; 
     const record = getAttendanceRecord(empId, date);
 
-    if (isWeekend) {
-        extraClass = ' weekend';
-    } else if (isHoliday) {
-        extraClass = ' holiday';
-    } else if (isBeforeJoinDate) { 
+    if (isBeforeJoinDate) { 
         extraClass = ' tbh';
-        statusText = 'TBH';
-        badge = '<span class="badge bg-secondary">TBH</span>';
-        
-    }
-    
-    // Determine status based on record
-    if(record){
-      if (record.status === 'LEAVE') {
-        badge = `<span class="badge bg-danger">${record.leaveType}</span>`;
-        statusText = record.leaveType;
-      } else if (record.customShift) { 
-        const shiftName = getNsaRules()[record.customShift]?.name || 'Shift Change';
-        
-        // --- START: UPDATED SHIFT CODE LOGIC ---
-        let displayCode = getShiftDisplayCode(record.customShift);
-        
-        badge = `<span class="badge bg-info text-dark" title="Shift Override: ${shiftName}"> ${displayCode}</span>`;
-        // --- END: UPDATED SHIFT CODE LOGIC ---
-
-        statusText = `SC (${record.customShift})`;
-        extraClass += ' custom-shift';
-      } else if (record.status === 'PRESENT') {
-        badge = '<span class="badge bg-success">P</span>';
-        statusText = 'P';
-      }
-    } else if(!isWeekend && !isHoliday && !isBeforeJoinDate){
-      // Default to Present only AFTER Join Date
-      badge = '<span class="badge bg-success">P</span>';
-      statusText = 'P';
-    } else if (isHoliday) {
-       const holidayName = getHolidays().find(h => h.date === date)?.name || 'Holiday';
-       badge = `<span class="badge bg-warning text-dark">${holidayName.slice(0, 1) || 'H'}</span>`; 
-       statusText = 'H';
-    } else if (isWeekend && !isBeforeJoinDate) {
-        statusText = 'W';
+        statusHtml = '<div class="badge-status-text">TBH</div>';
+    } else if (holidayObj) {
+        extraClass = ' status-holiday'; // FULL BOX YELLOW
+        statusHtml = `<div class="badge-status-text">${holidayObj.name}</div>`; // FULL HOLIDAY NAME
+    } else if (record) {
+        if (record.status === 'LEAVE') {
+            extraClass = ' status-leave'; // FULL BOX RED
+            statusHtml = `<div class="badge-status-text">LEAVE: ${record.leaveType}</div>`;
+        } else if (record.customShift) { 
+            extraClass = ' status-override'; // FULL BOX CYAN/BLUE
+            let displayCode = getShiftDisplayCode(record.customShift); // Full shift name
+            statusHtml = `<div class="badge-status-text">${displayCode}</div>`;
+        } else if (record.status === 'PRESENT') {
+            extraClass = ' status-present'; // FULL BOX GREEN
+            statusHtml = '<div class="badge-status-text">PRESENT</div>';
+        }
+    } else if (isWeekend) {
+        extraClass = ' weekend';
+        statusHtml = '<div class="badge-status-text">WEEKEND</div>';
+    } else {
+        // Default to Present only AFTER Join Date
+        extraClass = ' status-present'; // FULL BOX GREEN
+        statusHtml = '<div class="badge-status-text">PRESENT</div>';
     }
     
     cell.className += extraClass;
     cell.setAttribute('data-date', date);
-    cell.setAttribute('data-status', statusText);
     
-    // Day name removed from cell as it is in the header now
-    cell.innerHTML = `<div class="fw-bold">${d}</div>${badge}`; 
+    // Set final HTML structure inside the cell
+    cell.innerHTML = `<div class="fw-bold date-day">${d}</div>${statusHtml}`; 
 
     // Only allow selection if not before join date (TBH)
     if (!isBeforeJoinDate) {
-        cell.onclick = () => toggleDate(cell, date);
+        cell.onclick = () => {
+            cell.classList.toggle('selected');
+            const idx = selectedDates.indexOf(date);
+            if(idx > -1) {
+                selectedDates.splice(idx, 1);
+            } else {
+                selectedDates.push(date);
+            }
+            // If you have a counter or label for selected days, update it here
+            if(typeof updateOverrideCount === "function") updateOverrideCount(); 
+        };
     }
     
-    container.appendChild(cell);
-    calendar.appendChild(container);
+    calendar.appendChild(cell);
   }
 }
 
@@ -2454,4 +2515,4 @@ function handleExcelUpload(event) {
 
 </script>
 </body>
-</html>s
+</html>
