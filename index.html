@@ -175,6 +175,11 @@
         border: 1px solid #bbdefb;
         border-radius: 12px;
     }
+    #bulkAttendanceEmpList .form-check .form-check-input {
+    float: left;
+    margin-left: 0;
+    margin-right: 5px;
+}
 </style>
 </head>
 <body>
@@ -267,6 +272,91 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" onclick="saveBulkEmployees()">Add Employees</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="bulkAttendanceModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-people-fill"></i> Advanced Bulk Tool</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-5 border-end">
+                        <h6>1. Select Employees</h6>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6"><select class="form-select form-select-sm" id="bulkDeptFilter" onchange="filterBulkEmpList()"></select></div>
+                            <div class="col-6"><input type="text" class="form-control form-control-sm" id="bulkEmpSearch" placeholder="Search..." onkeyup="filterBulkEmpList()"></div>
+                        </div>
+                        <label class="small fw-bold text-primary">Selected Preview:</label>
+                        <div id="selectedIdsPreview" class="border rounded p-2 mb-2 bg-light d-flex flex-wrap" style="max-height: 80px; overflow-y: auto;"></div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <small id="selectedCount" class="fw-bold text-muted">0 selected</small>
+                            <div>
+                                <button class="btn btn-xs btn-outline-secondary py-0" style="font-size:0.7rem" onclick="toggleAllBulkEmps(true)">Select Visible</button>
+                                <button class="btn btn-xs btn-outline-danger py-0" style="font-size:0.7rem" onclick="bulkSelectedEmpIds.clear(); updateSelectedCount(); filterBulkEmpList();">Clear All</button>
+                            </div>
+                        </div>
+                        <div id="bulkAttendanceEmpList" class="border rounded p-2" style="height: 250px; overflow-y: auto;"></div>
+                    </div>
+
+                    <div class="col-md-7">
+                        <h6>2. Select Dates</h6>
+                        <ul class="nav nav-pills mb-3" id="pills-tab">
+                            <li class="nav-item"><button class="nav-link active py-1" id="tab-range" data-bs-toggle="pill" data-bs-target="#bulk-range">Date Range</button></li>
+                            <li class="nav-item"><button class="nav-link py-1" id="tab-specific" data-bs-toggle="pill" data-bs-target="#bulk-specific">Specific Dates</button></li>
+                        </ul>
+                        <div class="tab-content border rounded p-3 mb-3 bg-light">
+                            <div class="tab-pane fade show active" id="bulk-range">
+                                <div class="row">
+                                    <div class="col-6"><label class="small">From</label><input type="date" class="form-control" id="bulkStartDate"></div>
+                                    <div class="col-6"><label class="small">To</label><input type="date" class="form-control" id="bulkEndDate"></div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="bulk-specific">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-8">
+                                        <div class="input-group input-group-sm">
+                                            <input type="date" class="form-control" id="specificDateInput">
+                                            <button class="btn btn-dark" onclick="addSpecificDate()">Add</button>
+                                            <button class="btn btn-primary" onclick="addFullMonthDates()">Month (No Wknd)</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control form-control-sm" id="dateBadgeSearch" placeholder="Search dates..." onkeyup="renderDateBadges()">
+                                    </div>
+                                </div>
+                                <div id="specificDateBadges" class="d-flex flex-wrap gap-2 p-2 bg-white border rounded" style="min-height:100px; max-height: 180px; overflow-y: auto;"></div>
+                                <button class="btn btn-link btn-sm text-danger p-0 mt-1" onclick="clearAllDates()">Clear All Dates</button>
+                            </div>
+                        </div>
+
+                        <h6>3. Attendance Action</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <select class="form-select" id="bulkStatus" onchange="toggleBulkShiftSelect()">
+                                    <option value="PRESENT">Mark PRESENT</option>
+                                    <option value="LEAVE_PL">LEAVE (PL)</option>
+                                    <option value="LEAVE_CL">LEAVE (CL)</option>
+                                    <option value="LEAVE_SL">LEAVE (SL)</option>
+                                    <option value="LEAVE_FL">LEAVE (FL)</option>
+                                    <option value="SHIFT_CHANGE">SHIFT OVERRIDE</option>
+                                    <option value="REMOVE" class="text-danger fw-bold">REMOVE ATTENDANCE (DELETE)</option>
+                                </select>
+                            </div>
+                            <div class="col-6 d-none" id="bulkShiftContainer">
+                                <select class="form-select" id="bulkShiftOverride"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-warning fw-bold w-100 py-3" onclick="saveBulkAttendance()">PROCESS BULK ATTENDANCE</button>
             </div>
         </div>
     </div>
@@ -441,6 +531,7 @@
                 <div class="d-flex gap-2">
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#employeeModal" onclick="clearForm()">+ Add Employee</button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#bulkEmployeeModal">+ Bulk Add</button>
+                    <button class="btn btn-warning" onclick="openBulkAttendanceModal()">📝 Bulk Attendance</button>
                     <button id="downloadSampleExcel" class="btn btn-info">Sample Excel</button>
                     <button class="btn btn-success" onclick="document.getElementById('empExcelFile').click()">
                         Upload Excel
@@ -911,6 +1002,219 @@ function renderHolidaysList() {
     }
 }
 
+/*********************
+ * BULK ATTENDANCE
+ *********************/
+
+// --- GLOBAL STATE ---
+let bulkSelectedEmpIds = new Set(); 
+let bulkSelectedDates = []; 
+
+// --- MODAL OPEN & RESET ---
+function openBulkAttendanceModal() {
+    bulkSelectedEmpIds.clear(); 
+    bulkSelectedDates = [];
+    document.getElementById('bulkEmpSearch').value = '';
+    document.getElementById('specificDateInput').value = '';
+    if(document.getElementById('dateBadgeSearch')) document.getElementById('dateBadgeSearch').value = '';
+    
+    // Populate Departments
+    const deptFilter = document.getElementById('bulkDeptFilter');
+    const departments = [...new Set(getEmployees().map(e => e.department).filter(Boolean))];
+    deptFilter.innerHTML = '<option value="">All Departments</option>' + 
+                           departments.map(d => `<option value="${d}">${d}</option>`).join('');
+
+    // Populate Shifts
+    const shiftSelect = document.getElementById('bulkShiftOverride');
+    const rules = getNsaRules();
+    shiftSelect.innerHTML = Object.keys(rules).map(k => `<option value="${k}">${rules[k].name}</option>`).join('');
+
+    renderDateBadges();
+    filterBulkEmpList();
+    updateSelectedCount();
+    new bootstrap.Modal(document.getElementById('bulkAttendanceModal')).show();
+}
+
+// --- EMPLOYEE SELECTION LOGIC ---
+function filterBulkEmpList() {
+    const dept = document.getElementById('bulkDeptFilter').value;
+    const search = document.getElementById('bulkEmpSearch').value.toLowerCase();
+    const container = document.getElementById('bulkAttendanceEmpList');
+    
+    const employees = getEmployees().filter(emp => {
+        const matchesDept = !dept || emp.department === dept;
+        const matchesSearch = emp.name.toLowerCase().includes(search) || emp.id.toLowerCase().includes(search);
+        return emp.status === 'Active' && matchesDept && matchesSearch;
+    });
+
+    container.innerHTML = employees.map(emp => {
+        const isChecked = bulkSelectedEmpIds.has(emp.id) ? 'checked' : '';
+        return `
+            <div class="form-check p-1 border-bottom">
+                <input class="form-check-input bulk-emp-checkbox" type="checkbox" 
+                    value="${emp.id}" id="bulk_chk_${emp.id}" ${isChecked}
+                    onchange="handleBulkCheckboxChange(this)">
+                <label class="form-check-label d-block small cursor-pointer" for="bulk_chk_${emp.id}">
+                    <strong>${emp.name}</strong> <span class="text-muted">(${emp.id})</span>
+                </label>
+            </div>`;
+    }).join('');
+}
+
+function handleBulkCheckboxChange(checkbox) {
+    if (checkbox.checked) bulkSelectedEmpIds.add(checkbox.value);
+    else bulkSelectedEmpIds.delete(checkbox.value);
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const count = bulkSelectedEmpIds.size;
+    document.getElementById('selectedCount').textContent = `${count} total selected`;
+    const previewEl = document.getElementById('selectedIdsPreview');
+    const allEmployees = getEmployees();
+    
+    if (count > 0) {
+        previewEl.innerHTML = Array.from(bulkSelectedEmpIds).map(id => {
+            const emp = allEmployees.find(e => e.id === id);
+            return `<span class="badge bg-primary me-1 mb-1 d-flex align-items-center gap-1" style="font-size:0.75rem">
+                ${emp ? emp.name : id} 
+                <span class="cursor-pointer fw-bold ms-1 text-white" onclick="removeSingleEmp('${id}')">×</span>
+            </span>`;
+        }).join('');
+    } else {
+        previewEl.innerHTML = '<span class="text-muted small italic">No employees selected</span>';
+    }
+}
+
+function removeSingleEmp(id) {
+    bulkSelectedEmpIds.delete(id);
+    updateSelectedCount();
+    filterBulkEmpList();
+}
+
+function toggleAllBulkEmps(selected) {
+    document.querySelectorAll('.bulk-emp-checkbox').forEach(chk => {
+        chk.checked = selected;
+        if (selected) bulkSelectedEmpIds.add(chk.value);
+        else bulkSelectedEmpIds.delete(chk.value);
+    });
+    updateSelectedCount();
+}
+
+// --- DATE SELECTION LOGIC ---
+function addSpecificDate() {
+    const input = document.getElementById('specificDateInput');
+    if (input.value && !bulkSelectedDates.includes(input.value)) {
+        bulkSelectedDates.push(input.value);
+        renderDateBadges();
+        input.value = '';
+    }
+}
+
+function addFullMonthDates() {
+    const monthInput = document.createElement('input');
+    monthInput.type = 'month';
+    monthInput.style.display = 'none';
+    document.body.appendChild(monthInput);
+    
+    monthInput.onchange = function() {
+        const [year, month] = this.value.split('-').map(Number);
+        const daysInMonth = new Date(year, month, 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month - 1, d);
+            const dayOfWeek = dateObj.getDay(); 
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sat (6) and Sun (0)
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                if (!bulkSelectedDates.includes(dateStr)) bulkSelectedDates.push(dateStr);
+            }
+        }
+        renderDateBadges();
+        document.body.removeChild(monthInput);
+    };
+    monthInput.showPicker();
+}
+
+function removeSpecificDate(dateToRemove) {
+    bulkSelectedDates = bulkSelectedDates.filter(d => d !== dateToRemove);
+    renderDateBadges();
+}
+
+function clearAllDates() {
+    bulkSelectedDates = [];
+    renderDateBadges();
+}
+
+function renderDateBadges() {
+    const container = document.getElementById('specificDateBadges');
+    const search = document.getElementById('dateBadgeSearch').value.toLowerCase();
+    const filtered = bulkSelectedDates.filter(d => d.includes(search)).sort();
+
+    container.innerHTML = filtered.map(date => `
+        <div class="d-flex align-items-center bg-dark text-white rounded px-2 py-1 mb-1" style="font-size: 0.85rem; gap: 8px;">
+            <span>${date}</span>
+            <button type="button" class="btn btn-sm btn-danger py-0 px-1 fw-bold" style="line-height:1" onclick="removeSpecificDate('${date}')">×</button>
+        </div>`).join('');
+}
+
+function toggleBulkShiftSelect() {
+    const status = document.getElementById('bulkStatus').value;
+    document.getElementById('bulkShiftContainer').classList.toggle('d-none', status !== 'SHIFT_CHANGE');
+}
+
+// --- SAVE ACTION ---
+function saveBulkAttendance() {
+    const selectedIds = Array.from(bulkSelectedEmpIds);
+    const activeTab = document.querySelector('#pills-tab .active').id;
+    const fullStatus = document.getElementById('bulkStatus').value;
+    const shiftOverride = document.getElementById('bulkShiftOverride').value;
+
+    let finalDates = [];
+    if (activeTab === 'tab-range') {
+        const start = document.getElementById('bulkStartDate').value;
+        const end = document.getElementById('bulkEndDate').value;
+        if (!start || !end) return alert("Select date range");
+        let curr = new Date(start);
+        while (curr <= new Date(end)) {
+            finalDates.push(curr.toISOString().split('T')[0]);
+            curr.setDate(curr.getDate() + 1);
+        }
+    } else {
+        if (bulkSelectedDates.length === 0) return alert("Add specific dates first");
+        finalDates = [...bulkSelectedDates];
+    }
+
+    if (selectedIds.length === 0) return alert("Select at least one employee");
+
+    let attendance = getAttendance();
+    const allEmps = getEmployees();
+
+    selectedIds.forEach(id => {
+        const emp = allEmps.find(e => e.id === id);
+        finalDates.forEach(date => {
+            if (emp && date < emp.joinDate) return;
+            const idx = attendance.findIndex(a => a.empId === id && a.date === date);
+            
+            if (fullStatus === 'REMOVE') {
+                if (idx > -1) attendance.splice(idx, 1);
+            } else {
+                let record = { empId: id, date, status: 'PRESENT', leaveType: null, customShift: null };
+                if (fullStatus.startsWith('LEAVE_')) {
+                    record.status = 'LEAVE';
+                    record.leaveType = fullStatus.replace('LEAVE_', '');
+                } else if (fullStatus === 'SHIFT_CHANGE') {
+                    record.customShift = shiftOverride;
+                }
+                if (idx > -1) attendance[idx] = record; 
+                else attendance.push(record);
+            }
+        });
+    });
+
+    setAttendance(attendance);
+    alert("Process completed!");
+    bootstrap.Modal.getInstance(document.getElementById('bulkAttendanceModal')).hide();
+    if (typeof renderCalendar === "function") renderCalendar();
+}
 
 /*********************
  * DEPARTMENT FILTER & HELPERS
